@@ -690,15 +690,17 @@ class ShoeBillingApp:
         prod_var = tk.BooleanVar(value=True)
         quote_var = tk.BooleanVar(value=True)
         history_var = tk.BooleanVar(value=True)
+        inventory_var = tk.BooleanVar(value=True)
 
         def on_all_toggle():
             v = all_var.get()
             prod_var.set(v)
             quote_var.set(v)
             history_var.set(v)
+            inventory_var.set(v)
 
         def refresh_all_var(*args):
-            if prod_var.get() and quote_var.get() and history_var.get():
+            if prod_var.get() and quote_var.get() and history_var.get() and inventory_var.get():
                 all_var.set(True)
             else:
                 all_var.set(False)
@@ -706,6 +708,7 @@ class ShoeBillingApp:
         prod_var.trace_add("write", lambda *a: refresh_all_var())
         quote_var.trace_add("write", lambda *a: refresh_all_var())
         history_var.trace_add("write", lambda *a: refresh_all_var())
+        inventory_var.trace_add("write", lambda *a: refresh_all_var())
 
         body = tk.Frame(win)
         body.pack(pady=4)
@@ -714,6 +717,7 @@ class ShoeBillingApp:
         tk.Checkbutton(body, text="商品数据", variable=prod_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="报价记录", variable=quote_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="销售记录", variable=history_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
+        tk.Checkbutton(body, text="库存记录", variable=inventory_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
 
         hint = tk.Label(win, text="提示：勾选的项目将备份到同一个文件夹。", font=self.fonts['small'], fg="#666")
         hint.pack(pady=(4, 0))
@@ -723,13 +727,12 @@ class ShoeBillingApp:
 
         def on_ok():
             selected_keys = []
-            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录"}
-            if prod_var.get():
-                selected_keys.append("product")
-            if quote_var.get():
-                selected_keys.append("quote")
-            if history_var.get():
-                selected_keys.append("history")
+            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录"}
+            if prod_var.get(): selected_keys.append("product")
+            if quote_var.get(): selected_keys.append("quote")
+            if history_var.get(): selected_keys.append("history")
+            if inventory_var.get(): selected_keys.append("inventory")
+            
             if not selected_keys:
                 messagebox.showwarning("提示", "请至少选择一项需要备份的数据。")
                 return
@@ -739,10 +742,10 @@ class ShoeBillingApp:
                 return
             try:
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                if len(selected_keys) == 3:
+                if len(selected_keys) == 4:
                     type_tag = "all"
                 else:
-                    code_map = {"product": "prod", "quote": "quote", "history": "history"}
+                    code_map = {"product": "prod", "quote": "quote", "history": "history", "inventory": "inv"}
                     type_tag = "_".join(code_map[k] for k in selected_keys)
                 backup_folder = os.path.join(folder, f"backup_{timestamp}_{type_tag}")
                 os.makedirs(backup_folder, exist_ok=True)
