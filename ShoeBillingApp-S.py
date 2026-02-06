@@ -29,7 +29,7 @@ class ShoeBillingApp:
                 self.root.iconbitmap(ICON_PATH)
         except Exception:
             pass
-        self.root.title("鞋类产品报价开单系统 V1.1正式版")
+        self.root.title("鞋类产品报价开单系统 V1.1.1正式版")
         self.root.geometry("1550x950")
         
         # --- 打印语言设置 ---
