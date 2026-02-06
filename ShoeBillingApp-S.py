@@ -13,6 +13,7 @@ FILES = {
     "product": os.path.join(BASE_DIR, "products.json"),
     "history": os.path.join(BASE_DIR, "billing_history.json"),
     "quote": os.path.join(BASE_DIR, "quote_history.json"),
+    "inventory": os.path.join(BASE_DIR, "inventory_history.json"),
     "password": os.path.join(BASE_DIR, "password.hash")
 }
 
@@ -356,11 +357,13 @@ class ShoeBillingApp:
             if '_checked' not in p: p['_checked'] = False
             if 'tag' not in p: p['tag'] = ""
             if 'cost_price' not in p: p['cost_price'] = 0
+            if 'stock' not in p: p['stock'] = 0  # Initialize stock
             if '_id' not in p: p['_id'] = str(uuid.uuid4())
 
             
         self.history = self.load_json(FILES["history"])
         self.quote_history = self.load_json(FILES["quote"])
+        self.inventory_history = self.load_json(FILES["inventory"])  # Load inventory history
         self.cart_items = []
         self.current_img_data = None 
         self.curr_bill_img = None     
@@ -1326,18 +1329,23 @@ class ShoeBillingApp:
         self.write_and_open(html, f"Quote_{d['id']}.html")
 
     # --- 报价单生成（大图模式 - 网格布局） ---
-    def gen_quotation_html_large_image(self, d):
-        """生成大图模式的报价单，3列网格布局"""
+    def gen_quotation_html_large_image(self, d, cols=3):
+        """生成大图模式的报价单，网格布局，列数可变"""
         lang = self.quote_print_lang_var.get()
         t = self.TRANS.get(lang, self.TRANS['en'])
         
-        # 计算每行3个商品
+        # 计算每行cols个商品
         items = d['items']
         grid_items = ""
         
-        for i in range(0, len(items), 3):
-            row_items = items[i:i+3]
-            grid_items += '<div style="display: flex; justify-content: flex-start; margin-bottom: 30px; page-break-inside: avoid; gap: 20px;">'
+        # 精确计算宽度: calc((100% - (cols - 1) * gap) / cols)
+        gap = 20
+        gap_total = (cols - 1) * gap
+        width_style = f"calc((100% - {gap_total}px) / {cols})"
+        
+        for i in range(0, len(items), cols):
+            row_items = items[i:i+cols]
+            grid_items += f'<div style="display: flex; justify-content: flex-start; margin-bottom: 30px; page-break-inside: avoid; gap: {gap}px;">'
             
             for it in row_items:
                 moq_ctns = int(it.get('moq_ctns', 0) or 0)
@@ -1347,10 +1355,10 @@ class ShoeBillingApp:
                 moq_text = f"{moq_ctns} CTNS ({total_qty} PAIRS)" if moq_ctns > 0 and pcs_per_ctn > 0 else "--"
                 
                 grid_items += f"""
-                <div style="flex: 1 1 calc(33.333% - 14px); min-width: 250px; text-align: center; border: 1px solid #e0e0e0; padding: 20px; background: #fff; border-radius: 4px;">
-                    <div style="margin-bottom: 15px; height: 220px; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border-radius: 4px;">
+                <div style="flex: 0 0 {width_style}; min-width: 0; text-align: center; border: 1px solid #e0e0e0; padding: 20px; background: #fff; border-radius: 4px;">
+                    <div style="margin-bottom: 15px; width: 100%; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border-radius: 4px; overflow: hidden;">
                         <img src="data:image/jpeg;base64,{it.get('img', '')}" 
-                             style="max-width: 200px; max-height: 200px; object-fit: contain;">
+                             style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333; text-align: left; padding-left: 5px;">
                         {t['no']}: {it.get('no', '--')}
@@ -1372,6 +1380,9 @@ class ShoeBillingApp:
                     </div>
                 </div>"""
             
+            # 如果最后一行不足 cols 个，补齐空白 div 以保持左对齐布局（虽然 flex justify-content: flex-start 已经处理了，但为了严谨）
+            # 其实 flex-start 足够了，不需要补齐
+            
             grid_items += '</div>'
         
         html = f"""
@@ -1379,6 +1390,7 @@ class ShoeBillingApp:
         <head>
             <meta charset="UTF-8">
             <style>
+                * {{ box-sizing: border-box; }}
                 body {{ 
                     font-family: 'Segoe UI', Arial, 'Microsoft YaHei', sans-serif; 
                     padding: 40px 60px; 
@@ -1389,6 +1401,8 @@ class ShoeBillingApp:
                     background: white;
                     padding: 40px;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    width: 100%;
+                    max-width: 100%;
                 }}
                 .title {{
                     font-size: 42px;
@@ -1419,6 +1433,7 @@ class ShoeBillingApp:
                 }}
                 .product-grid {{
                     margin: 30px 0;
+                    width: 100%;
                 }}
                 .footer-info {{
                     margin-top: 40px;
@@ -1440,15 +1455,20 @@ class ShoeBillingApp:
                 @media print {{
                     .no-print {{ display: none; }}
                     body {{ 
-                        padding: 20px;
+                        padding: 0;
+                        margin: 0;
                         background: white;
+                        width: 100%;
                     }}
                     .quotation-container {{
                         box-shadow: none;
-                        padding: 20px;
+                        padding: 0;
+                        margin: 0;
+                        width: 100%;
                     }}
                     @page {{
-                        margin: 1.5cm;
+                        margin: 1cm;
+                        size: auto;
                     }}
                 }}
             </style>
@@ -1533,16 +1553,29 @@ class ShoeBillingApp:
         self.notebook.pack(pady=8, expand=True, fill="both", padx=8)
         self.tab_products = tk.Frame(self.notebook, bg="#f5f5f5")
         self.tab_billing = tk.Frame(self.notebook, bg="#f5f5f5")
+        self.tab_inventory = tk.Frame(self.notebook, bg="#f5f5f5")
         self.tab_history = tk.Frame(self.notebook, bg="#f5f5f5") 
         self.tab_quote_hist = tk.Frame(self.notebook, bg="#f5f5f5")
         self.notebook.add(self.tab_products, text="📦 商品库管理")
+        self.notebook.add(self.tab_inventory, text="📊 库存管理")
         self.notebook.add(self.tab_billing, text="📝 销售开单")
         self.notebook.add(self.tab_history, text="📋 开单记录") 
         self.notebook.add(self.tab_quote_hist, text="💼 报价记录")
+        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         self.setup_product_lib_ui()
+        self.setup_inventory_ui()
         self.setup_billing_ui()
         self.setup_history_ui()
         self.setup_quote_history_ui()
+
+    def on_tab_changed(self, event):
+        try:
+            tab = event.widget.select()
+            text = event.widget.tab(tab, "text")
+            if text == "📊 库存管理":
+                self.refresh_inventory_list()
+        except:
+            pass
 
     def setup_product_lib_ui(self):
         f_con = tk.Frame(self.tab_products, bg="#f5f5f5")
@@ -1745,6 +1778,351 @@ class ShoeBillingApp:
         tk.Button(f_e, text="🧹 清空输入区域", bg="#d9d9d9", fg="#1f1f1f", height=1, 
                  command=self.reset_edit_panel, activebackground="#bfbfbf", **btn_style).pack(fill="x")
 
+    # --- 库存管理模块 ---
+    def setup_inventory_ui(self):
+        f_con = tk.Frame(self.tab_inventory, bg="#f5f5f5")
+        f_con.pack(fill="both", expand=True, padx=16, pady=16)
+        f_l = tk.Frame(f_con, bg="#ffffff", relief="flat", bd=0)
+        f_l.pack(side="left", fill="both", expand=True)
+
+        # 1. Top Filter Bar
+        f_top = tk.Frame(f_l, bg="#ffffff", pady=16, padx=16)
+        f_top.pack(fill="x")
+        
+        # Search area
+        f_search_area = tk.Frame(f_top, bg="#ffffff")
+        f_search_area.pack(side="left", padx=(0, 24))
+        tk.Label(f_search_area, text="🔍 搜索货号:", font=self.fonts['body_bold'], 
+                bg="#ffffff", fg="#1f1f1f").pack(side="left", padx=(0, 10))
+        self.ent_inv_search = tk.Entry(f_search_area, width=28, font=self.fonts['body'],
+                                       relief="solid", bd=1, highlightthickness=2,
+                                       highlightbackground="#e0e0e0", highlightcolor="#1677ff")
+        self.ent_inv_search.pack(side="left", padx=6, ipady=5)
+        self.ent_inv_search.bind("<KeyRelease>", lambda e: self.refresh_inventory_list())
+
+        # 2. Action Bar
+        f_actions = tk.Frame(f_l, bg="#ffffff", pady=12, padx=16)
+        f_actions.pack(fill="x")
+        
+        btn_style = {"font": self.fonts['button'], "relief": "flat", "cursor": "hand2", 
+                    "padx": 16, "pady": 8, "bd": 0}
+        
+        tk.Button(f_actions, text="📥 入库 (进货/退货/盘点)", command=self.open_inbound_dialog, bg="#52c41a", fg="white", 
+                 activebackground="#389e0d", **btn_style).pack(side="left", padx=4)
+        tk.Button(f_actions, text="📤 出库 (销售/盘点)", command=self.open_outbound_dialog, bg="#fa8c16", fg="white", 
+                 activebackground="#d46b08", **btn_style).pack(side="left", padx=4)
+        tk.Button(f_actions, text="📋 出入库记录", command=self.open_inventory_history_dialog, bg="#1677ff", fg="white", 
+                 activebackground="#0958d9", **btn_style).pack(side="left", padx=4)
+
+        # 3. Inventory List Header
+        header_f = tk.Frame(f_l, bg="#fafafa", pady=12, relief="flat", bd=0)
+        header_f.pack(fill="x", pady=(0, 0))
+        
+        # Inventory Columns
+        self.inv_cols_cfg = [
+            ("img", "图片", 100), 
+            ("no", "货号", 140), 
+            ("color", "颜色", 100), 
+            ("size", "码段", 100), 
+            ("stock", "当前库存(双)", 140),
+            ("moq", "装箱数(双/箱)", 120)
+        ]
+        self.inv_header_col_frames = []
+        
+        for k, name, base_w in self.inv_cols_cfg:
+             f_h = tk.Frame(header_f, width=base_w, height=44, bg="#fafafa")
+             f_h.pack(side="left", padx=1)
+             f_h.pack_propagate(False)
+             self.inv_header_col_frames.append(f_h)
+             tk.Label(f_h, text=name, font=self.fonts['table_header'], 
+                     fg="#1f1f1f", bg="#fafafa").place(relx=0.5, rely=0.5, anchor="center")
+
+        # 4. Scrollable Content
+        f_list_container = tk.Frame(f_l, bg="#ffffff")
+        f_list_container.pack(fill="both", expand=True)
+        
+        self.canvas_inv = tk.Canvas(f_list_container, bg="#ffffff", highlightthickness=0)
+        self.scr_inv = ttk.Scrollbar(f_list_container, command=self.canvas_inv.yview)
+        self.frm_inv_list = tk.Frame(self.canvas_inv, bg="#ffffff")
+        self.win_inv_list = self.canvas_inv.create_window((0,0), window=self.frm_inv_list, anchor="nw")
+        
+        self.canvas_inv.bind('<Configure>', self._on_inventory_canvas_configure)
+        self.canvas_inv.configure(yscrollcommand=self.scr_inv.set)
+        
+        self.canvas_inv.pack(side="left", fill="both", expand=True)
+        self.scr_inv.pack(side="right", fill="y")
+
+        def on_mw(e):
+            delta = e.delta
+            if e.num == 5: delta = -120
+            elif e.num == 4: delta = 120
+            step = int(-1 * (delta / 120))
+            if step == 0: step = -1 if delta < 0 else 1
+            self.canvas_inv.yview_scroll(step, "units")
+            
+        self.canvas_inv.bind("<MouseWheel>", on_mw)
+        self.frm_inv_list.bind("<MouseWheel>", on_mw)
+        
+        self.selected_inv_id = None
+        self.inv_row_widgets = {}
+
+    def _on_inventory_canvas_configure(self, event):
+        width = event.width
+        self.canvas_inv.itemconfig(self.win_inv_list, width=width)
+        
+        total_base = sum(c[2] for c in self.inv_cols_cfg)
+        factor = width / total_base if total_base > 0 else 1
+        
+        for i, (k, name, base_w) in enumerate(self.inv_cols_cfg):
+            new_w = int(base_w * factor)
+            self.inv_header_col_frames[i].config(width=new_w)
+            for pid, widgets in self.inv_row_widgets.items():
+                if i < len(widgets):
+                    widgets[i].config(width=new_w)
+
+    def refresh_inventory_list(self):
+        for w in self.frm_inv_list.winfo_children(): w.destroy()
+        self.inv_row_widgets = {}
+        
+        keyword = self.ent_inv_search.get().strip().lower()
+        
+        filtered = []
+        for p in self.products:
+            if keyword and keyword not in str(p.get('no', '')).lower():
+                continue
+            filtered.append(p)
+            
+        total_base = sum(c[2] for c in self.inv_cols_cfg)
+        canvas_width = self.canvas_inv.winfo_width()
+        if canvas_width <= 1: canvas_width = 1200 
+        factor = canvas_width / total_base if total_base > 0 else 1
+
+        for i, p in enumerate(filtered):
+            bg_color = "#f9f9f9" if i % 2 == 0 else "#ffffff"
+            row = tk.Frame(self.frm_inv_list, bg=bg_color, pady=4)
+            row.pack(fill="x")
+            
+            widgets = []
+            pid = p.get('_id')
+            
+            for k, name, base_w in self.inv_cols_cfg:
+                w = int(base_w * factor)
+                cell = tk.Frame(row, width=w, bg=bg_color, height=60)
+                cell.pack(side="left", padx=1)
+                cell.pack_propagate(False)
+                widgets.append(cell)
+                
+                if k == "img":
+                    if p.get("img"):
+                        try:
+                            img = Image.open(BytesIO(base64.b64decode(p["img"])))
+                            img.thumbnail((50, 50))
+                            ph = ImageTk.PhotoImage(img)
+                            lbl = tk.Label(cell, image=ph, bg=bg_color)
+                            lbl.image = ph
+                            lbl.place(relx=0.5, rely=0.5, anchor="center")
+                        except:
+                            tk.Label(cell, text="无图", bg=bg_color).place(relx=0.5, rely=0.5, anchor="center")
+                    else:
+                        tk.Label(cell, text="无图", bg=bg_color).place(relx=0.5, rely=0.5, anchor="center")
+                elif k == "stock":
+                    stk = p.get('stock', 0)
+                    fg = "#52c41a" if stk > 0 else "#f5222d"
+                    tk.Label(cell, text=str(stk), font=("Arial", 12, "bold"), fg=fg, bg=bg_color).place(relx=0.5, rely=0.5, anchor="center")
+                elif k == "moq": 
+                    # Display pcs per carton (pairs/ctn)
+                    tk.Label(cell, text=str(p.get('pcs', 0)), font=self.fonts['body'], bg=bg_color).place(relx=0.5, rely=0.5, anchor="center")
+                else:
+                    tk.Label(cell, text=str(p.get(k, "")), font=self.fonts['body'], bg=bg_color).place(relx=0.5, rely=0.5, anchor="center")
+            
+            self.inv_row_widgets[pid] = widgets
+
+        self.canvas_inv.update_idletasks()
+        self.canvas_inv.configure(scrollregion=self.canvas_inv.bbox("all"))
+
+    def open_inbound_dialog(self):
+        self.open_stock_dialog("in")
+
+    def open_outbound_dialog(self):
+        self.open_stock_dialog("out")
+
+    def open_stock_dialog(self, direction):
+        title = "商品入库" if direction == "in" else "商品出库"
+        win = tk.Toplevel(self.root)
+        win.title(title)
+        win.geometry("500x650")
+        win.configure(bg="white")
+        win.grab_set()
+        
+        win.update_idletasks()
+        x = (win.winfo_screenwidth() // 2) - (win.winfo_width() // 2)
+        y = (win.winfo_screenheight() // 2) - (win.winfo_height() // 2)
+        win.geometry(f"+{x}+{y}")
+        
+        tk.Label(win, text=title, font=self.fonts['subtitle'], bg="white").pack(pady=10)
+        
+        tk.Label(win, text="选择商品 (搜索货号):", font=self.fonts['body'], bg="white").pack(anchor="w", padx=20)
+        search_var = tk.StringVar()
+        entry_search = tk.Entry(win, textvariable=search_var, font=self.fonts['body'], bd=1, relief="solid")
+        entry_search.pack(fill="x", padx=20, pady=5)
+        
+        lb_frame = tk.Frame(win, bd=1, relief="solid")
+        lb_frame.pack(fill="both", expand=True, padx=20, pady=5)
+        
+        lb_prods = tk.Listbox(lb_frame, font=self.fonts['small'], height=6)
+        scroll = tk.Scrollbar(lb_frame, command=lb_prods.yview)
+        lb_prods.configure(yscrollcommand=scroll.set)
+        lb_prods.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+        
+        filtered_prods = []
+        
+        def refresh_list(*args):
+            nonlocal filtered_prods
+            key = search_var.get().lower()
+            lb_prods.delete(0, tk.END)
+            filtered_prods = []
+            for p in self.products:
+                display = f"{p.get('no')} - {p.get('color')} - {p.get('size')} (库存: {p.get('stock', 0)})"
+                if key in display.lower():
+                    lb_prods.insert(tk.END, display)
+                    filtered_prods.append(p)
+                    
+        search_var.trace("w", refresh_list)
+        refresh_list()
+        
+        op_frame = tk.Frame(win, bg="white", pady=10)
+        op_frame.pack(fill="x", padx=20)
+        
+        tk.Label(op_frame, text="操作类型:", font=self.fonts['body'], bg="white").grid(row=0, column=0, sticky="w")
+        type_var = tk.StringVar(value="进货" if direction == "in" else "销售")
+        
+        if direction == "in":
+            tk.Radiobutton(op_frame, text="进货", variable=type_var, value="进货", bg="white").grid(row=0, column=1)
+            tk.Radiobutton(op_frame, text="退货", variable=type_var, value="退货", bg="white").grid(row=0, column=2)
+            tk.Radiobutton(op_frame, text="盘点入库", variable=type_var, value="盘点", bg="white").grid(row=0, column=3)
+        else:
+            tk.Radiobutton(op_frame, text="销售", variable=type_var, value="销售", bg="white").grid(row=0, column=1)
+            tk.Radiobutton(op_frame, text="盘点出库", variable=type_var, value="盘点", bg="white").grid(row=0, column=2)
+            
+        tk.Label(op_frame, text="数量模式:", font=self.fonts['body'], bg="white").grid(row=1, column=0, sticky="w", pady=10)
+        mode_var = tk.StringVar(value="ctn")
+        tk.Radiobutton(op_frame, text="整箱入库" if direction == "in" else "整箱出库", variable=mode_var, value="ctn", bg="white").grid(row=1, column=1)
+        tk.Radiobutton(op_frame, text="散数(双/个)", variable=mode_var, value="pcs", bg="white").grid(row=1, column=2)
+        
+        tk.Label(op_frame, text="数量:", font=self.fonts['body'], bg="white").grid(row=2, column=0, sticky="w")
+        qty_entry = tk.Entry(op_frame, font=self.fonts['body'], width=10, bd=1, relief="solid")
+        qty_entry.grid(row=2, column=1, sticky="w")
+        
+        tk.Label(op_frame, text="备注:", font=self.fonts['body'], bg="white").grid(row=3, column=0, sticky="w", pady=10)
+        note_entry = tk.Entry(op_frame, font=self.fonts['body'], width=20, bd=1, relief="solid")
+        note_entry.grid(row=3, column=1, columnspan=3, sticky="we")
+        
+        def on_confirm():
+            idx = lb_prods.curselection()
+            if not idx:
+                messagebox.showwarning("提示", "请先选择一个商品！")
+                return
+            
+            p = filtered_prods[idx[0]]
+            try:
+                q = int(qty_entry.get())
+                if q <= 0: raise ValueError
+            except:
+                messagebox.showwarning("提示", "请输入有效的正整数数量！")
+                return
+                
+            mode = mode_var.get()
+            change_qty = 0
+            
+            if mode == "ctn":
+                pcs_per_ctn = int(p.get("pcs", 0) or 0)
+                if pcs_per_ctn <= 0:
+                     messagebox.showwarning("提示", "该商品未设置每箱双数(Pcs/Ctn)，无法使用整箱模式！")
+                     return
+                change_qty = q * pcs_per_ctn
+                mode_str = f"整箱 ({q}箱 x {pcs_per_ctn}双)"
+            else:
+                change_qty = q
+                mode_str = f"散数 ({q}双)"
+                
+            self.update_stock(p, change_qty, type_var.get(), direction, mode_str, note_entry.get())
+            win.destroy()
+            self.refresh_inventory_list()
+            messagebox.showinfo("成功", "库存更新成功！")
+            
+        tk.Button(win, text="确认提交", command=on_confirm, bg="#1976d2", fg="white", font=self.fonts['button'], padx=20).pack(pady=20)
+
+    def update_stock(self, product, qty, type_str, direction, mode_str, note):
+        # Update Stock
+        current_stock = int(product.get("stock", 0))
+        if direction == "in":
+            new_stock = current_stock + qty
+        else:
+            new_stock = current_stock - qty
+            
+        product["stock"] = new_stock
+        
+        # Save Product Data
+        self.save_json(FILES["product"], self.products)
+        
+        # Record History
+        record = {
+            "id": str(uuid.uuid4()),
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "type": type_str, # 进货/销售/盘点
+            "direction": "入库" if direction == "in" else "出库",
+            "mode": mode_str,
+            "change_qty": qty,
+            "stock_after": new_stock,
+            "product_no": product.get("no"),
+            "product_color": product.get("color"),
+            "product_size": product.get("size"),
+            "note": note
+        }
+        
+        if not hasattr(self, "inventory_history"):
+            self.inventory_history = []
+        self.inventory_history.insert(0, record)
+        self.save_json(FILES["inventory"], self.inventory_history)
+
+    def open_inventory_history_dialog(self):
+        win = tk.Toplevel(self.root)
+        win.title("出入库记录")
+        win.geometry("900x600")
+        
+        # Table
+        cols = ("time", "type", "direction", "no", "color", "size", "change", "stock", "mode", "note")
+        headers = ("时间", "类型", "方向", "货号", "颜色", "码段", "数量变动", "结余库存", "模式", "备注")
+        
+        tree = ttk.Treeview(win, columns=cols, show="headings", height=20)
+        for c, h in zip(cols, headers):
+            tree.heading(c, text=h)
+            tree.column(c, width=80 if c != "time" else 140, anchor="center")
+            
+        scroll = ttk.Scrollbar(win, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        
+        tree.pack(side="left", fill="both", expand=True)
+        scroll.pack(side="right", fill="y")
+        
+        # Load Data
+        if hasattr(self, "inventory_history"):
+            for r in self.inventory_history:
+                tree.insert("", "end", values=(
+                    r.get("time"),
+                    r.get("type"),
+                    r.get("direction"),
+                    r.get("product_no"),
+                    r.get("product_color"),
+                    r.get("product_size"),
+                    r.get("change_qty"),
+                    r.get("stock_after"),
+                    r.get("mode"),
+                    r.get("note")
+                ))
+
+
     def quick_billing(self):
         checked_prods = [p for p in self.products if p.get('_checked')]
         if not checked_prods:
@@ -1863,12 +2241,29 @@ class ShoeBillingApp:
         
         # 报价单模式选择
         mode_frame = tk.Frame(bot_f, bg="#e0e0e0"); mode_frame.pack(pady=(0, 10))
-        tk.Label(mode_frame, text="报价单模式:", font=("Arial", 10, "bold"), bg="#e0e0e0").pack(side="left", padx=5)
+        tk.Label(mode_frame, text="报价单模板:", font=("Arial", 10, "bold"), bg="#e0e0e0").pack(side="left", padx=5)
         quote_mode = tk.StringVar(value="table")
-        tk.Radiobutton(mode_frame, text="表格模式 (传统)", variable=quote_mode, value="table", 
+        
+        # 定义状态更新函数
+        def update_sp_state(*args):
+            if quote_mode.get() == "large_image":
+                sp_cols.config(state="normal")
+            else:
+                sp_cols.config(state="disabled")
+        quote_mode.trace("w", update_sp_state)
+
+        tk.Radiobutton(mode_frame, text="列表模板", variable=quote_mode, value="table", 
                       bg="#e0e0e0", font=("Arial", 10)).pack(side="left", padx=10)
-        tk.Radiobutton(mode_frame, text="大图模式 (网格)", variable=quote_mode, value="large_image", 
+        tk.Radiobutton(mode_frame, text="网格模板", variable=quote_mode, value="large_image", 
                       bg="#e0e0e0", font=("Arial", 10)).pack(side="left", padx=10)
+        
+        # 大图模式列数设置
+        tk.Label(mode_frame, text="列数:", font=("Arial", 10), bg="#e0e0e0").pack(side="left", padx=(5, 0))
+        sp_cols = tk.Spinbox(mode_frame, from_=1, to=6, width=3, font=("Arial", 10))
+        sp_cols.delete(0, "end")
+        sp_cols.insert(0, "4")
+        sp_cols.pack(side="left", padx=2)
+        update_sp_state()
         
         # 打印语言选择
         tk.Label(mode_frame, text="|  打印语言:", font=("Arial", 10, "bold"), bg="#e0e0e0").pack(side="left", padx=(20, 5))
@@ -1884,7 +2279,11 @@ class ShoeBillingApp:
             
             # 根据选择的模式生成不同的报价单
             if quote_mode.get() == "large_image":
-                self.gen_quotation_html_large_image(data)
+                try:
+                    c = int(sp_cols.get())
+                except:
+                    c = 3
+                self.gen_quotation_html_large_image(data, cols=c)
             else:
                 self.gen_quotation_html(data)
             
@@ -3090,6 +3489,136 @@ class ShoeBillingApp:
         except: 
             pass
 
+    def open_multi_spec_image_dialog(self, products_to_add, parent_win):
+        """
+        打开多规格图片设置窗口
+        products_to_add: 待保存的商品字典列表
+        parent_win: 新增商品的主窗口 (用于保存成功后关闭)
+        """
+        win = tk.Toplevel(self.root)
+        win.title("设置多规格图片")
+        win.geometry("600x600")
+        win.configure(bg="#f0f2f5")
+        win.grab_set()
+        
+        # 居中
+        win.update_idletasks()
+        w = 600
+        h = 600
+        x = (win.winfo_screenwidth() // 2) - (w // 2)
+        y = (win.winfo_screenheight() // 2) - (h // 2)
+        win.geometry(f"+{x}+{y}")
+
+        tk.Label(win, text="请为不同颜色的商品设置图片", font=("微软雅黑", 14, "bold"), bg="#f0f2f5").pack(pady=10)
+        
+        # Scrollable Frame
+        canvas = tk.Canvas(win, bg="#f0f2f5", highlightthickness=0)
+        scrollbar = tk.Scrollbar(win, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#f0f2f5")
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True, padx=10)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Store image labels/data references to update UI
+        img_refs = []
+
+        def update_row_img(idx, b64_data):
+            products_to_add[idx]["img"] = b64_data
+            # Update thumbnail
+            try:
+                if b64_data:
+                    img = Image.open(BytesIO(base64.b64decode(b64_data)))
+                    # Resize for thumbnail
+                    img.thumbnail((80, 80))
+                    photo = ImageTk.PhotoImage(img)
+                    img_refs[idx]['lbl'].config(image=photo, text="")
+                    img_refs[idx]['lbl'].image = photo # keep reference
+                else:
+                    img_refs[idx]['lbl'].config(image="", text="无图片")
+            except Exception as e:
+                print(e)
+
+        def choose_img_for(idx):
+            p = filedialog.askopenfilename(title="选择图片", filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.bmp;*.webp")])
+            if p:
+                try:
+                    with open(p, "rb") as f:
+                        b64 = base64.b64encode(f.read()).decode()
+                    update_row_img(idx, b64)
+                except Exception as e:
+                    messagebox.showerror("错误", str(e))
+
+        def paste_img_for(idx):
+            try:
+                img = self.get_clipboard_image()
+                if img:
+                    buf = BytesIO()
+                    img.save(buf, format="PNG")
+                    b64 = base64.b64encode(buf.getvalue()).decode()
+                    update_row_img(idx, b64)
+                else:
+                    messagebox.showinfo("提示", "剪贴板无图片")
+            except Exception as e:
+                messagebox.showerror("错误", str(e))
+
+        for i, p in enumerate(products_to_add):
+            row = tk.Frame(scrollable_frame, bg="white", pady=10, padx=10, relief="groove", bd=1)
+            row.pack(fill="x", pady=5, padx=5)
+            
+            # Color Label
+            tk.Label(row, text=f"颜色: {p.get('color')}", font=("微软雅黑", 12, "bold"), width=15, anchor="w", bg="white").pack(side="left")
+            
+            # Image Thumbnail
+            img_frame = tk.Frame(row, width=80, height=80, bg="#eee")
+            img_frame.pack(side="left", padx=10)
+            img_frame.pack_propagate(False)
+            
+            lbl = tk.Label(img_frame, text="无图片", bg="#eee")
+            lbl.pack(fill="both", expand=True)
+            
+            img_refs.append({'lbl': lbl})
+            
+            # Init with existing image if any
+            if p.get("img"):
+                update_row_img(i, p["img"])
+
+            # Buttons
+            btn_frame = tk.Frame(row, bg="white")
+            btn_frame.pack(side="left", padx=10)
+            
+            tk.Button(btn_frame, text="选择图片", command=lambda idx=i: choose_img_for(idx)).pack(fill="x", pady=2)
+            tk.Button(btn_frame, text="粘贴图片", command=lambda idx=i: paste_img_for(idx)).pack(fill="x", pady=2)
+
+        # Bottom Action Bar
+        action_bar = tk.Frame(win, bg="#f0f2f5", pady=10)
+        action_bar.pack(side="bottom", fill="x")
+        
+        def confirm_save():
+            # Save all
+            for p in products_to_add:
+                self.products.append(p)
+            
+            self.save_json(FILES["product"], self.products)
+            self.refresh_product_list()
+            if self.products:
+                try:
+                    self.update_browser()
+                except: pass
+            
+            win.destroy()
+            parent_win.destroy()
+            messagebox.showinfo("成功", f"批量新增 {len(products_to_add)} 个商品成功！")
+
+        tk.Button(action_bar, text="确认保存全部", command=confirm_save, bg="#1976d2", fg="white", font=("微软雅黑", 12), padx=20).pack()
+
     def open_new_product_dialog(self):
         """弹出新增商品窗口（独立弹窗）"""
         win = tk.Toplevel(self.root)
@@ -3122,38 +3651,65 @@ class ShoeBillingApp:
 
         # 先定义保存逻辑（下方会赋值到按钮）
         def do_save():
-            d = {k: w.get().strip() for k, w in ents.items()}
-            if not d.get("no"):
+            raw_data = {k: w.get().strip() for k, w in ents.items()}
+            if not raw_data.get("no"):
                 messagebox.showwarning("提示", "请输入货号！")
                 ents["no"].focus_set()
                 return
 
-            # 数值字段转换（允许为空）
-            try:
-                d["price"] = float(d.get("price") or 0)
-            except:
-                d["price"] = 0
-            try:
-                d["cost_price"] = float(d.get("cost_price") or 0)
-            except:
-                d["cost_price"] = 0
-            try:
-                d["pcs"] = int(d.get("pcs") or 0)
-            except:
-                d["pcs"] = 0
-            try:
-                d["moq_ctns"] = int(d.get("moq_ctns") or 0)
-            except:
-                d["moq_ctns"] = 0
+            # 解析颜色（支持用 / 分隔多个颜色）
+            color_input = raw_data.get("color", "")
+            # 如果包含 / 则分割，否则就是单个颜色
+            if "/" in color_input:
+                colors = [c.strip() for c in color_input.split("/") if c.strip()]
+            else:
+                colors = [color_input]
+            
+            if not colors:
+                colors = [""] # 即使为空也创建一个
 
-            d["img"] = new_img_data["b64"]
-            d["_checked"] = False
-            d["_id"] = str(uuid.uuid4())
+            products_to_add = []
+            
+            for c in colors:
+                d = raw_data.copy()
+                d["color"] = c
+                
+                # 数值字段转换（允许为空）
+                try:
+                    d["price"] = float(d.get("price") or 0)
+                except:
+                    d["price"] = 0
+                try:
+                    d["cost_price"] = float(d.get("cost_price") or 0)
+                except:
+                    d["cost_price"] = 0
+                try:
+                    d["pcs"] = int(d.get("pcs") or 0)
+                except:
+                    d["pcs"] = 0
+                try:
+                    d["moq_ctns"] = int(d.get("moq_ctns") or 0)
+                except:
+                    d["moq_ctns"] = 0
 
-            if d.get("tag") is None:
-                d["tag"] = ""
+                d["img"] = new_img_data["b64"]
+                d["_checked"] = False
+                d["_id"] = str(uuid.uuid4())
 
-            self.products.append(d)
+                if d.get("tag") is None:
+                    d["tag"] = ""
+
+                products_to_add.append(d)
+
+            if len(products_to_add) > 1:
+                self.open_multi_spec_image_dialog(products_to_add, win)
+                return
+
+            # Single product save
+            for d in products_to_add:
+                self.products.append(d)
+                saved_count += 1
+
             self.save_json(FILES["product"], self.products)
             self.refresh_product_list()
             if self.products:
@@ -3162,7 +3718,8 @@ class ShoeBillingApp:
                 except:
                     pass
             win.destroy()
-            messagebox.showinfo("成功", f"商品 {d['no']} 已新增成功！")
+            
+            messagebox.showinfo("成功", f"商品 {raw_data['no']} 已新增成功！")
 
         tk.Button(btn_row, text="保存新增", command=do_save, bg="#1976d2", fg="white",
                   font=self.fonts['button'], relief="flat", cursor="hand2",
@@ -3230,7 +3787,7 @@ class ShoeBillingApp:
             ("最小起订量 (箱)", "moq_ctns"),
             ("成本价 Cost", "cost_price"),
             ("码段 Size", "size"),
-            ("颜色 Color", "color"),
+            ("颜色 Color (多色用/分隔)", "color"),
             ("每箱 Pcs", "pcs"),
         ]
 
@@ -3238,7 +3795,8 @@ class ShoeBillingApp:
         for i, (label, key) in enumerate(fields):
             r = tk.Frame(form, bg="#ffffff")
             r.pack(fill="x", pady=6)
-            tk.Label(r, text=label + ":", width=12, anchor="w", bg="#ffffff", fg="#1f1f1f", font=self.fonts['label']).pack(side="left")
+            # Increase width to 28 to fit long labels like "颜色 Color (多色用/分隔)"
+            tk.Label(r, text=label + ":", width=28, anchor="w", bg="#ffffff", fg="#1f1f1f", font=self.fonts['label']).pack(side="left")
             e = tk.Entry(r, font=self.fonts['body'], relief="solid", bd=1,
                          highlightthickness=1, highlightbackground="#d9d9d9", highlightcolor="#1976d2")
             e.pack(side="left", fill="x", expand=True, ipady=5)
@@ -3360,7 +3918,7 @@ class ShoeBillingApp:
         for (label, key) in fields:
             r = tk.Frame(form, bg="#ffffff")
             r.pack(fill="x", pady=6)
-            tk.Label(r, text=label + ":", width=12, anchor="w", bg="#ffffff", fg="#1f1f1f", font=self.fonts['label']).pack(side="left")
+            tk.Label(r, text=label + ":", width=16, anchor="w", bg="#ffffff", fg="#1f1f1f", font=self.fonts['label']).pack(side="left")
             e = tk.Entry(r, font=self.fonts['body'], relief="solid", bd=1,
                          highlightthickness=1, highlightbackground="#d9d9d9", highlightcolor="#1976d2")
             e.pack(side="left", fill="x", expand=True, ipady=5)
@@ -3671,7 +4229,11 @@ class ShoeBillingApp:
                     
                     # 根据选择的模式生成不同的报价单
                     if quote_mode.get() == "large_image":
-                        self.gen_quotation_html_large_image(data)
+                        try:
+                            c = int(sp_cols.get())
+                        except:
+                            c = 3
+                        self.gen_quotation_html_large_image(data, cols=c)
                     else:
                         self.gen_quotation_html(data)
                     
@@ -3683,12 +4245,29 @@ class ShoeBillingApp:
                 
                 # 报价单模式选择
                 mode_frame = tk.Frame(bot_f, bg="#e0e0e0"); mode_frame.pack(pady=(0, 10))
-                tk.Label(mode_frame, text="报价单模式:", font=("Arial", 10, "bold"), bg="#e0e0e0").pack(side="left", padx=5)
+                tk.Label(mode_frame, text="报价单模板:", font=("Arial", 10, "bold"), bg="#e0e0e0").pack(side="left", padx=5)
                 quote_mode = tk.StringVar(value="table")
-                tk.Radiobutton(mode_frame, text="表格模式 (传统)", variable=quote_mode, value="table", 
+                
+                # 定义状态更新函数
+                def update_sp_state(*args):
+                    if quote_mode.get() == "large_image":
+                        sp_cols.config(state="normal")
+                    else:
+                        sp_cols.config(state="disabled")
+                quote_mode.trace("w", update_sp_state)
+
+                tk.Radiobutton(mode_frame, text="列表模板", variable=quote_mode, value="table", 
                               bg="#e0e0e0", font=("Arial", 10)).pack(side="left", padx=10)
-                tk.Radiobutton(mode_frame, text="大图模式 (网格)", variable=quote_mode, value="large_image", 
+                tk.Radiobutton(mode_frame, text="网格模板", variable=quote_mode, value="large_image", 
                               bg="#e0e0e0", font=("Arial", 10)).pack(side="left", padx=10)
+                
+                # 大图模式列数设置
+                tk.Label(mode_frame, text="列数:", font=("Arial", 10), bg="#e0e0e0").pack(side="left", padx=(5, 0))
+                sp_cols = tk.Spinbox(mode_frame, from_=1, to=6, width=3, font=("Arial", 10))
+                sp_cols.delete(0, "end")
+                sp_cols.insert(0, "4")
+                sp_cols.pack(side="left", padx=2)
+                update_sp_state()
                 
                 tk.Button(bot_f, text="🚀 保存并打印报价单", command=gen, bg="#333", fg="white", height=2, font=("微软雅黑", 12, "bold"), width=30).pack()
 

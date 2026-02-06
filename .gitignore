@@ -13,3 +13,19 @@ dist/
 *.exe
 *.log
 .DS_Store
+
+# Data files
+inventory_history.json
+billing_history.json
+quote_history.json
+license.json
+password.hash
+sys_config.bin
+# User might want to keep products.json as initial data, but usually it is local data.
+# For now I will leave products.json alone unless I see it shouldn't be there.
+# But inventory_history.json is definitely local runtime data.
+
+# Generated files
+Quote_*.html
+Inv_*.html
+*备份*.py
