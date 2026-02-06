@@ -29,3 +29,4 @@ sys_config.bin
 Quote_*.html
 Inv_*.html
 *备份*.py
+build_exe.py

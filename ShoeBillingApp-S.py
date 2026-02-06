@@ -5,9 +5,46 @@ from io import BytesIO
 from PIL import Image, ImageTk, ImageGrab
 
 if getattr(sys, 'frozen', False):
-    BASE_DIR = os.path.dirname(sys.executable)
+    EXE_DIR = os.path.dirname(sys.executable)
+    # Define a dedicated data directory
+    BASE_DIR = os.path.join(EXE_DIR, "ShoeBilling_Data")
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Ensure the data directory exists
+if not os.path.exists(BASE_DIR):
+    try:
+        os.makedirs(BASE_DIR)
+    except OSError:
+        pass
+
+# --- 自动迁移旧数据 (Auto Migrate Legacy Data) ---
+# 如果在 EXE 同级目录下发现旧数据文件，且 Data 目录中没有，则自动复制进去
+if getattr(sys, 'frozen', False):
+    legacy_files = [
+        "products.json",
+        "billing_history.json",
+        "quote_history.json",
+        "inventory_history.json",
+        "password.hash",
+        "license.json",
+        "sys_config.bin",
+        "share_config.json",
+        "backup_config.json"
+    ]
+    
+    for filename in legacy_files:
+        old_path = os.path.join(EXE_DIR, filename)
+        new_path = os.path.join(BASE_DIR, filename)
+        
+        # 只有当旧文件存在 且 新位置不存在文件时才迁移
+        # 这样避免覆盖用户在新版本中产生的数据
+        if os.path.exists(old_path) and not os.path.exists(new_path):
+            try:
+                shutil.copy2(old_path, new_path)
+            except Exception:
+                pass
+# -----------------------------------------------
 
 FILES = {
     "product": os.path.join(BASE_DIR, "products.json"),
@@ -19,7 +56,11 @@ FILES = {
 
 SHARE_CONFIG_PATH = os.path.join(BASE_DIR, "share_config.json")
 BACKUP_CONFIG_PATH = os.path.join(BASE_DIR, "backup_config.json")
-ICON_PATH = os.path.join(BASE_DIR, "app.ico")
+# app.ico is expected to be next to the EXE or script, not in the data folder
+if getattr(sys, 'frozen', False):
+    ICON_PATH = os.path.join(EXE_DIR, "app.ico")
+else:
+    ICON_PATH = os.path.join(BASE_DIR, "app.ico")
 
 class ShoeBillingApp:
     def __init__(self, root):
@@ -734,16 +775,35 @@ class ShoeBillingApp:
         if not folder:
             return
         available = {}
+        
+        def find_backup_file(base_name):
+            # 1. Exact match
+            p = os.path.join(folder, base_name)
+            if os.path.exists(p):
+                return p
+            # 2. Fuzzy match
+            name_no_ext = os.path.splitext(base_name)[0]
+            try:
+                for f in os.listdir(folder):
+                    if f.lower().endswith(".json") and name_no_ext.lower() in f.lower():
+                        return os.path.join(folder, f)
+            except Exception:
+                pass
+            return None
+
         for name, file_path in FILES.items():
             if name == "password":
                 continue
-            backup_file = os.path.join(folder, os.path.basename(file_path))
-            if os.path.exists(backup_file):
-                available[name] = backup_file
-        label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录"}
+            base_name = os.path.basename(file_path)
+            found = find_backup_file(base_name)
+            if found:
+                available[name] = found
+                
+        label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录"}
         if not available:
             messagebox.showwarning("提示", "选定文件夹中未找到可用的备份文件。")
             return
+            
         win = tk.Toplevel(self.root)
         win.title("选择恢复内容")
         win.resizable(False, False)
@@ -758,31 +818,6 @@ class ShoeBillingApp:
 
         tk.Label(win, text="请选择需要恢复的数据", font=self.fonts['subtitle']).pack(pady=(12, 4))
 
-    def backup_to_gdrive(self):
-        folder = getattr(self, "gdrive_backup_dir", None)
-        if not folder or not os.path.isdir(folder):
-            folder = filedialog.askdirectory(title="选择 Google Drive 备份文件夹")
-            if not folder:
-                return
-            self.save_backup_config(folder)
-        try:
-            selected_keys = ["product", "quote", "history"]
-            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录"}
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_folder = os.path.join(folder, f"backup_{timestamp}_all")
-            os.makedirs(backup_folder, exist_ok=True)
-            for name, file_path in FILES.items():
-                if name == "password":
-                    continue
-                if name not in selected_keys:
-                    continue
-                if os.path.exists(file_path):
-                    shutil.copy2(file_path, os.path.join(backup_folder, os.path.basename(file_path)))
-            labels = [label_map[k] for k in selected_keys]
-            messagebox.showinfo("成功", f"已备份到 Google Drive 文件夹：\n{backup_folder}\n备份内容：{', '.join(labels)}")
-        except Exception as e:
-            messagebox.showerror("错误", f"备份失败：{str(e)}")
-
         mode_frame = tk.Frame(win)
         mode_frame.pack(pady=(0, 4))
         mode_var = tk.StringVar(value="overwrite")
@@ -795,19 +830,18 @@ class ShoeBillingApp:
         prod_var = tk.BooleanVar(value="product" in available)
         quote_var = tk.BooleanVar(value="quote" in available)
         history_var = tk.BooleanVar(value="history" in available)
+        inventory_var = tk.BooleanVar(value="inventory" in available)
 
         def refresh_children():
             v = all_var.get()
-            if "product" in available:
-                prod_var.set(v)
-            if "quote" in available:
-                quote_var.set(v)
-            if "history" in available:
-                history_var.set(v)
+            if "product" in available: prod_var.set(v)
+            if "quote" in available: quote_var.set(v)
+            if "history" in available: history_var.set(v)
+            if "inventory" in available: inventory_var.set(v)
 
         def refresh_all(*args):
             values = []
-            for key, var in [("product", prod_var), ("quote", quote_var), ("history", history_var)]:
+            for key, var in [("product", prod_var), ("quote", quote_var), ("history", history_var), ("inventory", inventory_var)]:
                 if key in available:
                     values.append(var.get())
             if values and all(values):
@@ -818,6 +852,7 @@ class ShoeBillingApp:
         prod_var.trace_add("write", lambda *a: refresh_all())
         quote_var.trace_add("write", lambda *a: refresh_all())
         history_var.trace_add("write", lambda *a: refresh_all())
+        inventory_var.trace_add("write", lambda *a: refresh_all())
 
         body = tk.Frame(win)
         body.pack(pady=4)
@@ -826,6 +861,7 @@ class ShoeBillingApp:
         tk.Checkbutton(body, text="商品数据", variable=prod_var, state="normal" if "product" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="报价记录", variable=quote_var, state="normal" if "quote" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="销售记录", variable=history_var, state="normal" if "history" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
+        tk.Checkbutton(body, text="库存记录", variable=inventory_var, state="normal" if "inventory" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
 
         tk.Label(win, text="提示：仅会恢复当前文件夹中存在的备份文件。", font=self.fonts['small'], fg="#666").pack(pady=(4, 0))
 
@@ -834,12 +870,11 @@ class ShoeBillingApp:
 
         def on_ok():
             selected = []
-            if prod_var.get() and "product" in available:
-                selected.append("product")
-            if quote_var.get() and "quote" in available:
-                selected.append("quote")
-            if history_var.get() and "history" in available:
-                selected.append("history")
+            if prod_var.get() and "product" in available: selected.append("product")
+            if quote_var.get() and "quote" in available: selected.append("quote")
+            if history_var.get() and "history" in available: selected.append("history")
+            if inventory_var.get() and "inventory" in available: selected.append("inventory")
+            
             if not selected:
                 messagebox.showwarning("提示", "请至少选择一项需要恢复的数据。")
                 return
@@ -947,6 +982,31 @@ class ShoeBillingApp:
         tk.Button(btn_row, text="开始恢复", command=on_ok, bg="#e67e22", fg="white",
                   font=self.fonts['button'], relief="flat", cursor="hand2",
                   padx=16, pady=6, activebackground="#d35400").pack(side="right", padx=6)
+
+    def backup_to_gdrive(self):
+        folder = getattr(self, "gdrive_backup_dir", None)
+        if not folder or not os.path.isdir(folder):
+            folder = filedialog.askdirectory(title="选择 Google Drive 备份文件夹")
+            if not folder:
+                return
+            self.save_backup_config(folder)
+        try:
+            selected_keys = ["product", "quote", "history", "inventory"]
+            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录"}
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_folder = os.path.join(folder, f"backup_{timestamp}_all")
+            os.makedirs(backup_folder, exist_ok=True)
+            for name, file_path in FILES.items():
+                if name == "password":
+                    continue
+                if name not in selected_keys:
+                    continue
+                if os.path.exists(file_path):
+                    shutil.copy2(file_path, os.path.join(backup_folder, os.path.basename(file_path)))
+            labels = [label_map[k] for k in selected_keys]
+            messagebox.showinfo("成功", f"已备份到 Google Drive 文件夹：\n{backup_folder}\n备份内容：{', '.join(labels)}")
+        except Exception as e:
+            messagebox.showerror("错误", f"备份失败：{str(e)}")
 
     def load_share_config(self):
         self.share_dir = None
