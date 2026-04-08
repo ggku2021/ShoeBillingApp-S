@@ -26,6 +26,7 @@ if getattr(sys, 'frozen', False):
         "billing_history.json",
         "quote_history.json",
         "inventory_history.json",
+        "stock_prep_history.json",
         "password.hash",
         "license.json",
         "sys_config.bin",
@@ -51,6 +52,7 @@ FILES = {
     "history": os.path.join(BASE_DIR, "billing_history.json"),
     "quote": os.path.join(BASE_DIR, "quote_history.json"),
     "inventory": os.path.join(BASE_DIR, "inventory_history.json"),
+    "stock_prep": os.path.join(BASE_DIR, "stock_prep_history.json"),
     "password": os.path.join(BASE_DIR, "password.hash")
 }
 
@@ -81,6 +83,7 @@ class ShoeBillingApp:
             "zh": {
                 "title_quotation": "报价单",
                 "title_invoice": "销售发货单",
+                "title_stock_prep": "备货单",
                 "client": "客户",
                 "ref": "报价单号",
                 "date": "日期",
@@ -115,6 +118,7 @@ class ShoeBillingApp:
             "en": {
                 "title_quotation": "QUOTATION",
                 "title_invoice": "SALES INVOICE",
+                "title_stock_prep": "STOCK PREP LIST",
                 "client": "Client",
                 "ref": "Ref",
                 "date": "Date",
@@ -405,6 +409,7 @@ class ShoeBillingApp:
         self.history = self.load_json(FILES["history"])
         self.quote_history = self.load_json(FILES["quote"])
         self.inventory_history = self.load_json(FILES["inventory"])  # Load inventory history
+        self.stock_prep_history = self.load_json(FILES["stock_prep"]) # Load stock prep history
         self.cart_items = []
         self.current_img_data = None 
         self.curr_bill_img = None     
@@ -425,6 +430,7 @@ class ShoeBillingApp:
         self.refresh_product_list()
         self.refresh_history_list()
         self.refresh_quote_history_list()
+        self.refresh_stock_prep_list()
         if self.products: self.update_browser()
 
     def load_json(self, f):
@@ -691,6 +697,7 @@ class ShoeBillingApp:
         quote_var = tk.BooleanVar(value=True)
         history_var = tk.BooleanVar(value=True)
         inventory_var = tk.BooleanVar(value=True)
+        stock_prep_var = tk.BooleanVar(value=True)
 
         def on_all_toggle():
             v = all_var.get()
@@ -698,9 +705,10 @@ class ShoeBillingApp:
             quote_var.set(v)
             history_var.set(v)
             inventory_var.set(v)
+            stock_prep_var.set(v)
 
         def refresh_all_var(*args):
-            if prod_var.get() and quote_var.get() and history_var.get() and inventory_var.get():
+            if prod_var.get() and quote_var.get() and history_var.get() and inventory_var.get() and stock_prep_var.get():
                 all_var.set(True)
             else:
                 all_var.set(False)
@@ -709,6 +717,7 @@ class ShoeBillingApp:
         quote_var.trace_add("write", lambda *a: refresh_all_var())
         history_var.trace_add("write", lambda *a: refresh_all_var())
         inventory_var.trace_add("write", lambda *a: refresh_all_var())
+        stock_prep_var.trace_add("write", lambda *a: refresh_all_var())
 
         body = tk.Frame(win)
         body.pack(pady=4)
@@ -718,6 +727,7 @@ class ShoeBillingApp:
         tk.Checkbutton(body, text="报价记录", variable=quote_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="销售记录", variable=history_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="库存记录", variable=inventory_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
+        tk.Checkbutton(body, text="备货单记录", variable=stock_prep_var, font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
 
         hint = tk.Label(win, text="提示：勾选的项目将备份到同一个文件夹。", font=self.fonts['small'], fg="#666")
         hint.pack(pady=(4, 0))
@@ -727,11 +737,12 @@ class ShoeBillingApp:
 
         def on_ok():
             selected_keys = []
-            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录"}
+            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录", "stock_prep": "备货单记录"}
             if prod_var.get(): selected_keys.append("product")
             if quote_var.get(): selected_keys.append("quote")
             if history_var.get(): selected_keys.append("history")
             if inventory_var.get(): selected_keys.append("inventory")
+            if stock_prep_var.get(): selected_keys.append("stock_prep")
             
             if not selected_keys:
                 messagebox.showwarning("提示", "请至少选择一项需要备份的数据。")
@@ -742,10 +753,10 @@ class ShoeBillingApp:
                 return
             try:
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                if len(selected_keys) == 4:
+                if len(selected_keys) == 5:
                     type_tag = "all"
                 else:
-                    code_map = {"product": "prod", "quote": "quote", "history": "history", "inventory": "inv"}
+                    code_map = {"product": "prod", "quote": "quote", "history": "history", "inventory": "inv", "stock_prep": "stock"}
                     type_tag = "_".join(code_map[k] for k in selected_keys)
                 backup_folder = os.path.join(folder, f"backup_{timestamp}_{type_tag}")
                 os.makedirs(backup_folder, exist_ok=True)
@@ -802,7 +813,7 @@ class ShoeBillingApp:
             if found:
                 available[name] = found
                 
-        label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录"}
+        label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录", "stock_prep": "备货单记录"}
         if not available:
             messagebox.showwarning("提示", "选定文件夹中未找到可用的备份文件。")
             return
@@ -834,6 +845,7 @@ class ShoeBillingApp:
         quote_var = tk.BooleanVar(value="quote" in available)
         history_var = tk.BooleanVar(value="history" in available)
         inventory_var = tk.BooleanVar(value="inventory" in available)
+        stock_prep_var = tk.BooleanVar(value="stock_prep" in available)
 
         def refresh_children():
             v = all_var.get()
@@ -841,10 +853,11 @@ class ShoeBillingApp:
             if "quote" in available: quote_var.set(v)
             if "history" in available: history_var.set(v)
             if "inventory" in available: inventory_var.set(v)
+            if "stock_prep" in available: stock_prep_var.set(v)
 
         def refresh_all(*args):
             values = []
-            for key, var in [("product", prod_var), ("quote", quote_var), ("history", history_var), ("inventory", inventory_var)]:
+            for key, var in [("product", prod_var), ("quote", quote_var), ("history", history_var), ("inventory", inventory_var), ("stock_prep", stock_prep_var)]:
                 if key in available:
                     values.append(var.get())
             if values and all(values):
@@ -856,6 +869,7 @@ class ShoeBillingApp:
         quote_var.trace_add("write", lambda *a: refresh_all())
         history_var.trace_add("write", lambda *a: refresh_all())
         inventory_var.trace_add("write", lambda *a: refresh_all())
+        stock_prep_var.trace_add("write", lambda *a: refresh_all())
 
         body = tk.Frame(win)
         body.pack(pady=4)
@@ -865,6 +879,7 @@ class ShoeBillingApp:
         tk.Checkbutton(body, text="报价记录", variable=quote_var, state="normal" if "quote" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="销售记录", variable=history_var, state="normal" if "history" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
         tk.Checkbutton(body, text="库存记录", variable=inventory_var, state="normal" if "inventory" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
+        tk.Checkbutton(body, text="备货单记录", variable=stock_prep_var, state="normal" if "stock_prep" in available else "disabled", font=self.fonts['body']).pack(anchor="w", padx=40, pady=2)
 
         tk.Label(win, text="提示：仅会恢复当前文件夹中存在的备份文件。", font=self.fonts['small'], fg="#666").pack(pady=(4, 0))
 
@@ -877,6 +892,7 @@ class ShoeBillingApp:
             if quote_var.get() and "quote" in available: selected.append("quote")
             if history_var.get() and "history" in available: selected.append("history")
             if inventory_var.get() and "inventory" in available: selected.append("inventory")
+            if stock_prep_var.get() and "stock_prep" in available: selected.append("stock_prep")
             
             if not selected:
                 messagebox.showwarning("提示", "请至少选择一项需要恢复的数据。")
@@ -994,8 +1010,8 @@ class ShoeBillingApp:
                 return
             self.save_backup_config(folder)
         try:
-            selected_keys = ["product", "quote", "history", "inventory"]
-            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录"}
+            selected_keys = ["product", "quote", "history", "inventory", "stock_prep"]
+            label_map = {"product": "商品数据", "quote": "报价记录", "history": "销售记录", "inventory": "库存记录", "stock_prep": "备货单记录"}
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_folder = os.path.join(folder, f"backup_{timestamp}_all")
             os.makedirs(backup_folder, exist_ok=True)
@@ -1315,6 +1331,9 @@ class ShoeBillingApp:
         html = f"""
         <html>
         <head>
+            <meta charset="UTF-8">
+            <title>{t['title_quotation']}</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
                 body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }}
                 .header-table {{ width: 100%; margin-bottom: 20px; border:none; }}
@@ -1386,7 +1405,76 @@ class ShoeBillingApp:
 
             <div class="page-numbering"></div>
 
+            <button class="no-print" onclick="copyImages(event)" style="position:fixed; bottom:90px; right:30px; padding:12px 24px; background:#1677ff; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">复制报价单图片</button>
             <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{t['print_quotation']}</button>
+            
+            <script>
+            async function copyImages(event) {{
+                const btn = event.currentTarget;
+                const originalText = btn.innerText;
+                
+                if (typeof html2canvas === 'undefined') {{
+                    alert('复制失败：无法加载图片处理库(html2canvas)。请检查网络连接是否正常，或刷新页面重试。');
+                    return;
+                }}
+
+                try {{
+                    btn.innerText = '正在生成图片...';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+
+                    const images = Array.from(document.images);
+                    await Promise.all(images.map(img => {{
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(resolve => {{ img.onload = img.onerror = resolve; }});
+                    }}));
+
+                    const canvas = await html2canvas(document.body, {{
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        ignoreElements: (el) => el.classList.contains('no-print'),
+                        onclone: (clonedDoc) => {{
+                            const buttons = clonedDoc.querySelectorAll('.no-print');
+                            buttons.forEach(b => b.style.display = 'none');
+                        }}
+                    }});
+
+                    if (navigator.clipboard && window.ClipboardItem) {{
+                        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                        await navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]);
+                        alert('✅ 已成功复制报价单图片到剪贴板！');
+                    }} else {{
+                        throw new Error('Clipboard API 不可用');
+                    }}
+                }} catch (err) {{
+                    console.error('复制图片失败:', err);
+                    try {{
+                        const canvas = await html2canvas(document.body, {{
+                            scale: 2,
+                            useCORS: true,
+                            backgroundColor: '#ffffff',
+                            ignoreElements: (el) => el.classList.contains('no-print')
+                        }});
+                        const a = document.createElement('a');
+                        a.href = canvas.toDataURL('image/png');
+                        a.download = `报价单_${{new Date().getTime()}}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        alert('⚠️ 剪贴板访问受限，已自动为您下载图片文件。');
+                    }} catch (e) {{
+                        console.error('下载图片失败:', e);
+                        alert('❌ 复制/下载图片均失败，请尝试使用系统自带截图功能(Win+Shift+S)。');
+                    }}
+                }} finally {{
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }}
+            }}
+            </script>
         </body>
         </html>"""
         self.write_and_open(html, f"Quote_{d['id']}.html")
@@ -1452,6 +1540,8 @@ class ShoeBillingApp:
         <html>
         <head>
             <meta charset="UTF-8">
+            <title>{t['title_invoice']}</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
                 * {{ box-sizing: border-box; }}
                 body {{ 
@@ -1619,17 +1709,20 @@ class ShoeBillingApp:
         self.tab_inventory = tk.Frame(self.notebook, bg="#f5f5f5")
         self.tab_history = tk.Frame(self.notebook, bg="#f5f5f5") 
         self.tab_quote_hist = tk.Frame(self.notebook, bg="#f5f5f5")
+        self.tab_stock_prep = tk.Frame(self.notebook, bg="#f5f5f5")
         self.notebook.add(self.tab_products, text="📦 商品库管理")
         self.notebook.add(self.tab_inventory, text="📊 库存管理")
         self.notebook.add(self.tab_billing, text="📝 销售开单")
         self.notebook.add(self.tab_history, text="📋 开单记录") 
         self.notebook.add(self.tab_quote_hist, text="💼 报价记录")
+        self.notebook.add(self.tab_stock_prep, text="🚚 备货单记录")
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         self.setup_product_lib_ui()
         self.setup_inventory_ui()
         self.setup_billing_ui()
         self.setup_history_ui()
         self.setup_quote_history_ui()
+        self.setup_stock_prep_ui()
 
     def on_tab_changed(self, event):
         try:
@@ -2592,8 +2685,11 @@ class ShoeBillingApp:
         btn_save.pack(fill="x", padx=8, pady=(0, 8))
         
         self.show_price_var = tk.BooleanVar(value=True)
+        self.sync_stock_prep_var = tk.BooleanVar(value=False)
         tk.Checkbutton(btn_save, text="显示价格金额", variable=self.show_price_var,
                       bg="#ffffff", font=self.fonts['body']).pack(side="left", padx=(0, 10))
+        tk.Checkbutton(btn_save, text="同步生成备货单", variable=self.sync_stock_prep_var,
+                      bg="#ffffff", font=self.fonts['body'], fg="#2ecc71").pack(side="left", padx=(0, 10))
 
         # 打印语言选择
         tk.Label(btn_save, text="|  打印语言:", bg="#ffffff", fg="#999", font=self.fonts['body']).pack(side="left", padx=(5, 5))
@@ -2709,16 +2805,329 @@ class ShoeBillingApp:
             ep.insert(0, str(p.get('price', 0))); ep.place(relx=0.5, rely=0.5, anchor="center")
             
             # Editable Ctns（更大字体）
-            cf = tk.Frame(row, width=130, height=120, bg=bg); cf.pack(side="left", padx=1); cf.pack_propagate(False)
-            ec = tk.Entry(cf, width=12, font=self.fonts['body_bold'], bg="#fff7e6", justify="center",
+            cf = tk.Frame(row, width=110, height=120, bg=bg); cf.pack(side="left", padx=1); cf.pack_propagate(False)
+            ec = tk.Entry(cf, width=8, font=self.fonts['body_bold'], bg="#fff7e6", justify="center",
                          relief="solid", bd=1, highlightthickness=2,
                          highlightbackground="#ffd591", highlightcolor="#fa8c16"); 
             ec.place(relx=0.5, rely=0.5, anchor="center")
+
+            # Loose Item Button（散货按钮）
+            lf = tk.Frame(row, width=80, height=120, bg=bg); lf.pack(side="left", padx=1); lf.pack_propagate(False)
+            tk.Button(lf, text="散货", command=lambda product=p, price_ent=ep: self.open_loose_item_dialog(product, price_ent),
+                      bg="#faad14", fg="white", font=self.fonts['small'], relief="flat", cursor="hand2",
+                      activebackground="#d48806").place(relx=0.5, rely=0.5, anchor="center")
             
             self.bill_pick_rows.append({"p": p, "var": var, "ep": ep, "ec": ec})
 
         self.canvas_bp.update_idletasks()
         self.canvas_bp.config(scrollregion=self.canvas_bp.bbox("all"))
+
+    def parse_size_range(self, size_str):
+        """解析码段字符串，例如 '40-45' 或 '38,39,40'"""
+        if not size_str: return []
+        size_str = str(size_str).replace('，', ',').strip()
+        
+        # 1. 处理范围格式 (例如 40-45)
+        if '-' in size_str:
+            try:
+                parts = size_str.split('-')
+                if len(parts) >= 2:
+                    s_str = ''.join(filter(str.isdigit, parts[0]))
+                    e_str = ''.join(filter(str.isdigit, parts[1]))
+                    if s_str and e_str:
+                        start = int(s_str)
+                        end = int(e_str)
+                        if start > end: start, end = end, start
+                        # 安全检查：限制范围大小，防止无限循环或超大列表导致挂起
+                        if end - start > 100:
+                            return [s_str, e_str]
+                        return [str(i) for i in range(start, end + 1)]
+            except: pass
+                
+        # 2. 处理逗号分隔格式 (例如 38,39,40)
+        if ',' in size_str:
+            return [s.strip() for s in size_str.split(',') if s.strip()]
+        
+        # 3. 兜底处理
+        only_digits = ''.join(filter(str.isdigit, size_str))
+        if only_digits and len(only_digits) < 10:
+            return [only_digits]
+        return [size_str]
+
+    def open_loose_item_dialog(self, p, price_ent=None):
+        """弹出散货输入对话框（支持动态增删尺码）"""
+        win = tk.Toplevel(self.root)
+        win.title(f"散货录入 - {p['no']}")
+        win.geometry("550x650")
+        
+        # 居中显示
+        win.update_idletasks()
+        rw, rh = 550, 650
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+        win.geometry(f"+{(sw-rw)//2}+{(sh-rh)//2}")
+        win.transient(self.root)
+        
+        main_f = tk.Frame(win, padx=20, pady=20, bg="#ffffff")
+        main_f.pack(fill="both", expand=True)
+        
+        tk.Label(main_f, text=f"商品货号: {p['no']}", font=self.fonts['subtitle'], bg="#ffffff").pack(pady=(0, 10))
+        tk.Label(main_f, text=f"颜色: {p.get('color','')}", font=self.fonts['body'], bg="#ffffff").pack()
+        
+        # 价格输入
+        p_f = tk.Frame(main_f, bg="#ffffff", pady=10)
+        p_f.pack(fill="x")
+        tk.Label(p_f, text="单价 (每双):", font=self.fonts['body'], bg="#ffffff").pack(side="left")
+        ent_price = tk.Entry(p_f, font=self.fonts['body'], width=10)
+        
+        if price_ent:
+            try: ent_price.insert(0, price_ent.get())
+            except: ent_price.insert(0, str(p.get('price', 0)))
+        else:
+            ent_price.insert(0, str(p.get('price', 0)))
+        ent_price.pack(side="left", padx=10)
+        
+        # 尺码录入表头
+        header_f = tk.Frame(main_f, bg="#f5f5f5", pady=5)
+        header_f.pack(fill="x", pady=(10, 0))
+        tk.Label(header_f, text="尺码 (Size)", width=15, bg="#f5f5f5", font=self.fonts['body_bold']).pack(side="left", padx=5)
+        tk.Label(header_f, text="数量 (Pairs)", width=15, bg="#f5f5f5", font=self.fonts['body_bold']).pack(side="left", padx=5)
+        
+        # 滚动区域
+        scroll_f = tk.Frame(main_f, bg="#ffffff")
+        scroll_f.pack(fill="both", expand=True)
+        canvas = tk.Canvas(scroll_f, bg="#ffffff", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(scroll_f, orient="vertical", command=canvas.yview)
+        inner_f = tk.Frame(canvas, bg="#ffffff")
+        
+        can_win = canvas.create_window((0, 0), window=inner_f, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(can_win, width=e.width))
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        rows = [] # 存储行数据: [(size_ent, qty_ent, frame), ...]
+        
+        def add_row(size_val="", qty_val=""):
+            r_f = tk.Frame(inner_f, bg="#ffffff", pady=5)
+            r_f.pack(fill="x")
+            
+            s_e = tk.Entry(r_f, font=self.fonts['body'], width=15, justify="center")
+            s_e.insert(0, str(size_val))
+            s_e.pack(side="left", padx=5)
+            
+            q_e = tk.Entry(r_f, font=self.fonts['body'], width=15, justify="center")
+            q_e.insert(0, str(qty_val))
+            q_e.pack(side="left", padx=5)
+            
+            def del_row():
+                if len(rows) > 1:
+                    rows.remove((s_e, q_e, r_f))
+                    r_f.destroy()
+                    canvas.configure(scrollregion=canvas.bbox("all"))
+                else:
+                    messagebox.showinfo("提示", "至少保留一行输入尺码")
+            
+            tk.Button(r_f, text="删除", command=del_row, bg="#ff4d4f", fg="white", 
+                      font=self.fonts['small'], padx=10, relief="flat").pack(side="left", padx=10)
+            
+            rows.append((s_e, q_e, r_f))
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            s_e.focus()
+
+        # 初始化尺码行
+        suggested = self.parse_size_range(p.get('size', ''))
+        if suggested:
+            for s in suggested[:12]: # 预设最多12行
+                add_row(s)
+        else:
+            add_row()
+            
+        tk.Button(main_f, text="➕ 添加一行尺码", command=add_row, bg="#52c41a", fg="white", 
+                 font=self.fonts['body_bold'], pady=5, relief="flat").pack(fill="x", pady=10)
+        
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        inner_f.bind("<Configure>", _on_frame_configure)
+        
+        def save_loose():
+            try:
+                prc = float(ent_price.get() or 0)
+                details = {}
+                total_pairs = 0
+                for s_e, q_e, _ in rows:
+                    sz = s_e.get().strip()
+                    qv = q_e.get().strip()
+                    if sz and qv:
+                        try:
+                            qty = int(qv)
+                            if qty > 0:
+                                details[sz] = details.get(sz, 0) + qty
+                                total_pairs += qty
+                        except: pass
+                
+                if total_pairs <= 0:
+                    messagebox.showwarning("提示", "请输入有效的双数数量")
+                    return
+                
+                # 添加到购物车
+                self.cart_items.append({
+                    "no": p['no'],
+                    "size": p.get('size', ''), 
+                    "color": p.get('color', ''),
+                    "type": "loose",
+                    "loose_data": details,
+                    "ctns": 0,
+                    "pcs": 1, 
+                    "total": total_pairs,
+                    "price": prc,
+                    "amount": total_pairs * prc,
+                    "img": p.get('img')
+                })
+                self.refresh_cart()
+                win.destroy()
+                messagebox.showinfo("成功", f"已添加 {total_pairs} 双散货商品到发货清单")
+                
+            except ValueError:
+                messagebox.showerror("错误", "请输入有效的数字")
+
+        tk.Button(main_f, text="确认添加", command=save_loose, bg="#1677ff", fg="white", 
+                 font=self.fonts['button'], pady=10, relief="flat").pack(fill="x", pady=5)
+        
+        try:
+            win.grab_set()
+        except:
+            pass
+
+    def open_edit_loose_item_dialog(self, it):
+        """编辑已在清单中的散货商品（支持动态增删尺码）"""
+        win = tk.Toplevel(self.root)
+        win.title(f"编辑散货 - {it['no']}")
+        win.geometry("550x650")
+        
+        # 居中显示
+        win.update_idletasks()
+        rw, rh = 550, 650
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+        win.geometry(f"+{(sw-rw)//2}+{(sh-rh)//2}")
+        win.transient(self.root)
+        
+        main_f = tk.Frame(win, padx=20, pady=20, bg="#ffffff")
+        main_f.pack(fill="both", expand=True)
+        
+        tk.Label(main_f, text=f"商品货号: {it['no']}", font=self.fonts['subtitle'], bg="#ffffff").pack(pady=(0, 10))
+        tk.Label(main_f, text=f"颜色: {it.get('color','')}", font=self.fonts['body'], bg="#ffffff").pack()
+        
+        # 价格输入
+        p_f = tk.Frame(main_f, bg="#ffffff", pady=10)
+        p_f.pack(fill="x")
+        tk.Label(p_f, text="单价 (每双):", font=self.fonts['body'], bg="#ffffff").pack(side="left")
+        ent_price = tk.Entry(p_f, font=self.fonts['body'], width=10)
+        ent_price.insert(0, str(it.get('price', 0)))
+        ent_price.pack(side="left", padx=10)
+        
+        # 尺码录入表头
+        header_f = tk.Frame(main_f, bg="#f5f5f5", pady=5)
+        header_f.pack(fill="x", pady=(10, 0))
+        tk.Label(header_f, text="尺码 (Size)", width=15, bg="#f5f5f5", font=self.fonts['body_bold']).pack(side="left", padx=5)
+        tk.Label(header_f, text="数量 (Pairs)", width=15, bg="#f5f5f5", font=self.fonts['body_bold']).pack(side="left", padx=5)
+        
+        # 滚动区域
+        scroll_f = tk.Frame(main_f, bg="#ffffff")
+        scroll_f.pack(fill="both", expand=True)
+        canvas = tk.Canvas(scroll_f, bg="#ffffff", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(scroll_f, orient="vertical", command=canvas.yview)
+        inner_f = tk.Frame(canvas, bg="#ffffff")
+        
+        can_win = canvas.create_window((0, 0), window=inner_f, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig(can_win, width=e.width))
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        rows = [] # 存储行数据: [(size_ent, qty_ent, frame), ...]
+        
+        def add_row(size_val="", qty_val=""):
+            r_f = tk.Frame(inner_f, bg="#ffffff", pady=5)
+            r_f.pack(fill="x")
+            
+            s_e = tk.Entry(r_f, font=self.fonts['body'], width=15, justify="center")
+            s_e.insert(0, str(size_val))
+            s_e.pack(side="left", padx=5)
+            
+            q_e = tk.Entry(r_f, font=self.fonts['body'], width=15, justify="center")
+            q_e.insert(0, str(qty_val))
+            q_e.pack(side="left", padx=5)
+            
+            def del_row():
+                if len(rows) > 1:
+                    rows.remove((s_e, q_e, r_f))
+                    r_f.destroy()
+                    canvas.configure(scrollregion=canvas.bbox("all"))
+                else:
+                    messagebox.showinfo("提示", "至少保留一行输入尺码")
+            
+            tk.Button(r_f, text="删除", command=del_row, bg="#ff4d4f", fg="white", 
+                      font=self.fonts['small'], padx=10, relief="flat").pack(side="left", padx=10)
+            
+            rows.append((s_e, q_e, r_f))
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            s_e.focus()
+
+        # 加载已有数据
+        loose_data = it.get('loose_data', {})
+        if loose_data:
+            for sz, qv in loose_data.items():
+                add_row(sz, qv)
+        else:
+            add_row()
+            
+        tk.Button(main_f, text="➕ 添加一行尺码", command=add_row, bg="#52c41a", fg="white", 
+                 font=self.fonts['body_bold'], pady=5, relief="flat").pack(fill="x", pady=10)
+        
+        def _on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        inner_f.bind("<Configure>", _on_frame_configure)
+        
+        def update_loose():
+            try:
+                prc = float(ent_price.get() or 0)
+                details = {}
+                total_pairs = 0
+                for s_e, q_e, _ in rows:
+                    sz = s_e.get().strip()
+                    qv = q_e.get().strip()
+                    if sz and qv:
+                        try:
+                            qty = int(qv)
+                            if qty > 0:
+                                details[sz] = details.get(sz, 0) + qty
+                                total_pairs += qty
+                        except: pass
+                
+                if total_pairs <= 0:
+                    messagebox.showwarning("提示", "请输入有效的双数数量")
+                    return
+                
+                it['loose_data'] = details
+                it['total'] = total_pairs
+                it['price'] = prc
+                it['amount'] = total_pairs * prc
+                
+                self.refresh_cart()
+                win.destroy()
+                messagebox.showinfo("成功", "散货商品信息已更新")
+            except ValueError:
+                messagebox.showerror("错误", "请输入有效的数字")
+
+        tk.Button(main_f, text="确认修改", command=update_loose, bg="#52c41a", fg="white", 
+                 font=self.fonts['button'], pady=10, relief="flat").pack(fill="x", pady=5)
+        
+        try:
+            win.grab_set()
+        except:
+            pass
 
     def add_picking_to_cart(self):
         added = 0
@@ -2792,6 +3201,7 @@ class ShoeBillingApp:
         total_all = subtotal + shipping
         balance = total_all - deposit - paid
         total_ctns = sum(it['ctns'] for it in d['items'])
+        total_loose_qty = sum(it['total'] for it in d['items'] if it.get('type') == 'loose')
         total_qty = sum(it['total'] for it in d['items'])
 
         # 获取显示价格选项
@@ -2826,16 +3236,29 @@ class ShoeBillingApp:
             price_td = f'<td style="border:1px solid #ddd; padding:8px;">¥{it["price"]:.2f}</td>' if show_price else ''
             amount_td = f'<td style="border:1px solid #ddd; padding:8px; font-weight:bold; color:#d32f2f;">¥{it["amount"]:.2f}</td>' if show_price else ''
             
+            # 处理散货显示逻辑
+            is_loose = it.get('type') == 'loose'
+            if is_loose:
+                ctns_val = "--" # 散货不显示箱数
+                pcs_val = "--"
+                # 尺码显示明细
+                details = it.get('loose_data', {})
+                size_display = ", ".join([f"{s}#{qty}" for s, qty in details.items()])
+            else:
+                ctns_val = it['ctns']
+                pcs_val = it['pcs']
+                size_display = it.get('size', '--')
+
             rows += f"""
             <tr style="text-align:center; height:{row_h}px;">
                 <td style="border:1px solid #ddd; padding:8px;">
                     <img src="data:image/jpeg;base64,{it.get('img', '')}" style="height:{img_h}px; max-width:{img_w}px; object-fit:contain;">
                 </td>
                 <td style="border:1px solid #ddd; padding:8px; font-weight:bold;">{it['no']}</td>
-                <td style="border:1px solid #ddd; padding:8px;">{it.get('size', '--')}</td>
+                <td style="border:1px solid #ddd; padding:8px;">{size_display}</td>
                 <td style="border:1px solid #ddd; padding:8px;">{it.get('color', '--')}</td>
-                <td style="border:1px solid #ddd; padding:8px;">{it['ctns']}</td>
-                <td style="border:1px solid #ddd; padding:8px;">{it['pcs']}</td>
+                <td style="border:1px solid #ddd; padding:8px;">{ctns_val}</td>
+                <td style="border:1px solid #ddd; padding:8px;">{pcs_val}</td>
                 <td style="border:1px solid #ddd; padding:8px; font-weight:bold;">{it['total']}</td>
                 {price_td}
                 {amount_td}
@@ -2846,8 +3269,12 @@ class ShoeBillingApp:
         amount_th = f'<th width="120">{t["amount"]}</th>' if show_price else ''
 
         # 底部统计处理
+        summary_ctns = str(total_ctns)
+        if total_loose_qty > 0:
+            summary_ctns += f" + {total_loose_qty} Pairs(散)"
+
         summary_html = f"""
-                <div class="summary-item"><b>{t['ctns']}:</b> <span style="color:#1976d2; font-weight:bold;">{total_ctns}</span></div>
+                <div class="summary-item"><b>{t['ctns']}:</b> <span style="color:#1976d2; font-weight:bold;">{summary_ctns}</span></div>
                 <div class="summary-item"><b>{t['qty']}:</b> <span style="color:#1976d2; font-weight:bold;">{total_qty}</span></div>
         """
         if show_price:
@@ -2866,6 +3293,8 @@ class ShoeBillingApp:
         <html>
         <head>
             <meta charset="UTF-8">
+            <title>{t['title_invoice']}</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
                 body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }}
                 .header-table {{ width: 100%; margin-bottom: 20px; border:none; }}
@@ -2955,7 +3384,77 @@ class ShoeBillingApp:
 
             <div class="page-numbering"></div>
 
+            <button class="no-print" onclick="copyImages(event)" style="position:fixed; bottom:90px; right:30px; padding:12px 24px; background:#1677ff; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">复制发货单图片</button>
             <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{t['print_invoice']}</button>
+            <script>
+            async function copyImages(event) {{
+                const btn = event.currentTarget;
+                const originalText = btn.innerText;
+                
+                if (typeof html2canvas === 'undefined') {{
+                    alert('复制失败：无法加载图片处理库(html2canvas)。请检查网络连接是否正常，或刷新页面重试。');
+                    return;
+                }}
+
+                try {{
+                    btn.innerText = '正在生成图片...';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+
+                    // 等待所有图片加载完成
+                    const images = Array.from(document.images);
+                    await Promise.all(images.map(img => {{
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(resolve => {{ img.onload = img.onerror = resolve; }});
+                    }}));
+
+                    const canvas = await html2canvas(document.body, {{
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        ignoreElements: (el) => el.classList.contains('no-print'),
+                        onclone: (clonedDoc) => {{
+                            // 在克隆的文档中隐藏按钮，确保不会出现在截图中
+                            const buttons = clonedDoc.querySelectorAll('.no-print');
+                            buttons.forEach(b => b.style.display = 'none');
+                        }}
+                    }});
+
+                    if (navigator.clipboard && window.ClipboardItem) {{
+                        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                        await navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]);
+                        alert('✅ 已成功复制发货单图片到剪贴板！');
+                    }} else {{
+                        throw new Error('Clipboard API 不可用');
+                    }}
+                }} catch (err) {{
+                    console.error('复制图片失败:', err);
+                    try {{
+                        const canvas = await html2canvas(document.body, {{
+                            scale: 2,
+                            useCORS: true,
+                            backgroundColor: '#ffffff',
+                            ignoreElements: (el) => el.classList.contains('no-print')
+                        }});
+                        const a = document.createElement('a');
+                        a.href = canvas.toDataURL('image/png');
+                        a.download = `发货单_${{new Date().getTime()}}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        alert('⚠️ 剪贴板访问受限，已自动为您下载图片文件。');
+                    }} catch (e) {{
+                        console.error('下载图片失败:', e);
+                        alert('❌ 复制/下载图片均失败，请尝试使用系统自带截图功能(Win+Shift+S)。');
+                    }}
+                }} finally {{
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }}
+            }}
+            </script>
         </body>
         </html>"""
         self.write_and_open(html, f"Inv_{d['id']}.html")
@@ -4114,6 +4613,7 @@ class ShoeBillingApp:
         self.history_context_menu = tk.Menu(self.root, tearoff=0, font=self.fonts['body'])
         self.history_context_menu.add_command(label="🗑️ 删除销售单", command=self.delete_history_item)
         self.history_context_menu.add_command(label="🖨️ 原单据重新打印", command=self.reprint_bill)
+        self.history_context_menu.add_command(label="🚚 生成备货单", command=self.generate_stock_prep_from_history)
         self.history_context_menu.add_command(label="✏️ 编辑后打印", command=self.edit_and_print_bill)
         # self.history_context_menu.add_command(label="🔗 分享链接", command=self.share_history_bill)
 
@@ -4137,6 +4637,7 @@ class ShoeBillingApp:
         self.quote_context_menu.add_command(label="🗑️ 删除报价单", command=self.delete_quote_item)
         self.quote_context_menu.add_command(label="🖨️ 原单据重新打印", command=self.reprint_quote)
         self.quote_context_menu.add_command(label="✏️ 编辑后打印", command=self.edit_and_print_quote)
+        self.quote_context_menu.add_command(label="📁 导出报价商品原图", command=self.export_quote_product_images)
         # Removed Share Link
 
     def share_history_bill(self):
@@ -4157,12 +4658,97 @@ class ShoeBillingApp:
             bid = self.tree_hist.item(sel[0], "values")[1]; b = next((x for x in self.history if x['id'] == bid), None)
             if b: self.gen_invoice_html(b)
 
+    def generate_stock_prep_from_history(self):
+        sel = self.tree_hist.selection()
+        if not sel:
+            return
+        bid = self.tree_hist.item(sel[0], "values")[1]
+        b = next((x for x in self.history if x['id'] == bid), None)
+        if not b:
+            return
+            
+        if messagebox.askyesno("确认", f"确定要为订单 {bid} 生成备货单吗？"):
+            sid = "SP" + b['id'][3:]
+            # 检查是否已存在同号备货单
+            exists = next((x for x in self.stock_prep_history if x['id'] == sid), None)
+            if exists:
+                if not messagebox.askyesno("提示", f"已存在编号为 {sid} 的备货单，是否重新生成并覆盖？"):
+                    return
+                self.stock_prep_history = [s for s in self.stock_prep_history if s['id'] != sid]
+            
+            s_order = {
+                "id": sid,
+                "date": b['date'],
+                "items": b['items']
+            }
+            self.stock_prep_history.append(s_order)
+            self.save_json(FILES["stock_prep"], self.stock_prep_history)
+            self.refresh_stock_prep_list()
+            self.gen_stock_prep_html(s_order, lang="zh")
+            messagebox.showinfo("成功", "备货单已生成。")
+
     def reprint_quote(self):
         sel = self.tree_q_hist.selection()
         if sel:
             qid = self.tree_q_hist.item(sel[0], "values")[1]; q = next((x for x in self.quote_history if x['id'] == qid), None)
             if q: self.gen_quotation_html(q)
     
+    def export_quote_product_images(self):
+        sel = self.tree_q_hist.selection()
+        if not sel:
+            return
+            
+        qid = self.tree_q_hist.item(sel[0], "values")[1]
+        quote = next((x for x in self.quote_history if x['id'] == qid), None)
+        if not quote:
+            return
+
+        base_dir = filedialog.askdirectory(title="选择导出目录")
+        if not base_dir:
+            return
+            
+        # Create subdirectory: qid_pic
+        safe_qid = "".join([c for c in str(qid) if c not in '\/:*?"<>|'])
+        target_dir = os.path.join(base_dir, f"{safe_qid}_pic")
+        
+        if not os.path.exists(target_dir):
+            try:
+                os.makedirs(target_dir)
+            except Exception as e:
+                messagebox.showerror("错误", f"无法创建文件夹: {e}")
+                return
+            
+        count = 0
+        client_name = str(quote.get('client', 'Unknown')).strip()
+        # Clean client name
+        safe_client = "".join([c for c in client_name if c not in '\/:*?"<>|'])
+        
+        for item in quote.get('items', []):
+            img_data = item.get('img', '')
+            if not img_data:
+                continue
+                
+            try:
+                # Naming: Client + No + Price
+                no = str(item.get('no', '')).strip()
+                price = str(item.get('price', '')).strip()
+                
+                safe_no = "".join([c for c in no if c not in '\/:*?"<>|'])
+                safe_price = "".join([c for c in price if c not in '\/:*?"<>|'])
+                
+                # Format: Client_No_Price.jpg
+                filename = f"{safe_client}_{safe_no}_{safe_price}.jpg"
+                filepath = os.path.join(target_dir, filename)
+                
+                img_bytes = base64.b64decode(img_data)
+                with open(filepath, "wb") as f:
+                    f.write(img_bytes)
+                count += 1
+            except Exception as e:
+                print(f"Error exporting image: {e}")
+                
+        messagebox.showinfo("导出完成", f"成功导出 {count} 张图片到:\n{target_dir}")
+
     def show_quote_context_menu(self, e):
         item = self.tree_q_hist.identify_row(e.y)
         if item:
@@ -4178,6 +4764,202 @@ class ShoeBillingApp:
                 self.save_json(FILES["quote"], self.quote_history)
                 self.refresh_quote_history_list()
     
+    def setup_stock_prep_ui(self):
+        # 配置Treeview样式（更大字体）
+        style = ttk.Style()
+        style.configure("Treeview", font=self.fonts['table_cell'], rowheight=36)
+        style.configure("Treeview.Heading", font=self.fonts['table_header'])
+        
+        f = tk.Frame(self.tab_stock_prep, bg="#f5f5f5"); 
+        f.pack(fill="both", expand=True, padx=16, pady=16)
+        
+        # 顶部操作栏
+        f_top = tk.Frame(f, bg="#f5f5f5", pady=10)
+        f_top.pack(fill="x")
+        tk.Button(f_top, text="🆕 创建独立备货单", command=self.create_independent_stock_prep, 
+                  bg="#2ecc71", fg="white", font=self.fonts['body'], relief="flat", 
+                  cursor="hand2", padx=14, pady=6, activebackground="#27ae60").pack(side="left")
+        
+        self.tree_s_hist = ttk.Treeview(f, columns=("date", "id", "items_count"), 
+                                       show="headings", style="Treeview")
+        for c, h in zip(self.tree_s_hist["columns"], ["日期 Date", "单号 No", "商品种类 Items"]): 
+            self.tree_s_hist.heading(c, text=h); self.tree_s_hist.column(c, anchor="center", width=250)
+        self.tree_s_hist.pack(fill="both", expand=True, padx=8, pady=8)
+        self.tree_s_hist.bind("<Double-1>", lambda e: self.reprint_stock_prep())
+        self.tree_s_hist.bind("<Delete>", lambda e: self.delete_stock_prep_item())
+        self.tree_s_hist.bind("<Button-3>", self.show_stock_prep_context_menu)
+        self.stock_prep_context_menu = tk.Menu(self.root, tearoff=0, font=self.fonts['body'])
+        self.stock_prep_context_menu.add_command(label="🗑️ 删除备货单", command=self.delete_stock_prep_item)
+        self.stock_prep_context_menu.add_command(label="🖨️ 原单据重新打印", command=self.reprint_stock_prep)
+
+    def refresh_stock_prep_list(self):
+        for item in self.tree_s_hist.get_children():
+            self.tree_s_hist.delete(item)
+        for s in reversed(self.stock_prep_history):
+            self.tree_s_hist.insert("", "end", values=(s['date'], s['id'], len(s.get('items', []))))
+
+    def show_stock_prep_context_menu(self, e):
+        item = self.tree_s_hist.identify_row(e.y)
+        if item:
+            self.tree_s_hist.selection_set(item)
+            self.stock_prep_context_menu.post(e.x_root, e.y_root)
+
+    def delete_stock_prep_item(self):
+        sel = self.tree_s_hist.selection()
+        if sel:
+            sid = self.tree_s_hist.item(sel[0], "values")[1]
+            if messagebox.askyesno("确认删除", f"确定要删除备货单 {sid} 吗？"):
+                self.stock_prep_history = [s for s in self.stock_prep_history if s['id'] != sid]
+                self.save_json(FILES["stock_prep"], self.stock_prep_history)
+                self.refresh_stock_prep_list()
+
+    def reprint_stock_prep(self):
+        sel = self.tree_s_hist.selection()
+        if sel:
+            sid = self.tree_s_hist.item(sel[0], "values")[1]
+            s = next((x for x in self.stock_prep_history if x['id'] == sid), None)
+            if s: self.gen_stock_prep_html(s, lang="zh")
+
+    def create_independent_stock_prep(self):
+        checked_prods = [p for p in self.products if p.get('_checked')]
+        if not checked_prods:
+            messagebox.showwarning("提示", "请先在商品库中通过勾选（复选框）选择商品！")
+            self.notebook.select(self.tab_products)
+            return
+            
+        if not messagebox.askyesno("确认", f"确定要为选中的 {len(checked_prods)} 个商品创建备货单吗？"):
+            return
+            
+        items = []
+        for p in checked_prods:
+            items.append({
+                "no": p['no'], 
+                "size": p.get('size', ''), 
+                "color": p.get('color', ''), 
+                "pcs": int(p.get('pcs', 0) or 0), 
+                "ctns": 1, # 默认1箱
+                "img": p.get('img')
+            })
+            
+        sid = "SP" + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        s_data = {
+            "id": sid,
+            "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "items": items
+        }
+        
+        self.stock_prep_history.append(s_data)
+        self.save_json(FILES["stock_prep"], self.stock_prep_history)
+        self.refresh_stock_prep_list()
+        self.gen_stock_prep_html(s_data, lang="zh")
+        messagebox.showinfo("成功", "独立备货单创建完成！")
+
+    def gen_stock_prep_html(self, d, lang=None):
+        if not lang:
+            lang = self.print_lang_var.get()
+        t = self.TRANS.get(lang, self.TRANS['en'])
+
+        total_ctns = 0
+        total_qty_sum = 0
+        total_loose_qty = 0
+        rows = ""
+        for i, it in enumerate(d['items']):
+            is_loose = it.get('type') == 'loose'
+            if is_loose:
+                ctns = 0
+                pcs_per_ctn = "--"
+                total_qty = it.get('total', 0)
+                total_loose_qty += total_qty
+                details = it.get('loose_data', {})
+                size_display = ", ".join([f"{s}#{qty}" for s, qty in details.items()])
+                ctns_display = '--'
+            else:
+                pcs_per_ctn = int(it.get('pcs', 0) or 0)
+                ctns = int(it.get('ctns', 0) or 0)
+                total_qty = it.get('total', 0)
+                total_ctns += ctns
+                size_display = it.get('size', '--')
+                ctns_display = str(ctns)
+            
+            total_qty_sum += total_qty
+            
+            rows += f"""
+            <tr style="text-align:center; height:100px;">
+                <td style="border:1px solid #ddd; padding:8px;">
+                    <img src="data:image/jpeg;base64,{it.get('img','')}" style="height:90px; max-width:120px; object-fit:contain;">
+                </td>
+                <td style="border:1px solid #ddd; padding:8px;">{it['no']}</td>
+                <td style="border:1px solid #ddd; padding:10px; font-size:14px; white-space:nowrap;">{size_display}</td>
+                <td style="border:1px solid #ddd; padding:8px;">{it.get('color','')}</td>
+                <td style="border:1px solid #ddd; padding:8px;">{ctns_display}</td>
+                <td style="border:1px solid #ddd; padding:8px;">{pcs_per_ctn}</td>
+                <td style="border:1px solid #ddd; padding:8px; font-weight:bold; color:#d32f2f;">{total_qty}</td>
+            </tr>"""
+
+        # 合计显示逻辑
+        summary_ctns = str(total_ctns)
+        if total_loose_qty > 0:
+            summary_ctns += f" + {total_loose_qty} Pairs(散)"
+
+        html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }}
+                .title {{ font-size: 36px; font-weight: bold; text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }}
+                .line {{ border-bottom: 3px solid #000; margin-bottom: 20px; }}
+                .meta-info {{ font-size: 16px; margin-bottom: 10px; line-height: 1.6; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }}
+                th {{ background: #333; color: #fff; padding: 15px 5px; text-transform: uppercase; border: 1px solid #333; }}
+                .summary-box {{ margin-top: 20px; padding: 15px; border: 2px solid #333; background: #f9f9f9; display: inline-block; min-width: 300px; }}
+                .summary-item {{ font-size: 18px; font-weight: bold; margin: 5px 0; }}
+                @media print {{ .no-print {{ display: none; }} }}
+            </style>
+        </head>
+        <body>
+            <div class="title">{t['title_stock_prep']}</div>
+            <div class="line"></div>
+            
+            <div class="meta-info">
+                <b>{t['invoice_no']}:</b> {d['id']} &nbsp;&nbsp;&nbsp;&nbsp; <b>{t['date']}:</b> {d['date']}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th width="140">{t['photo']}</th>
+                        <th width="100">{t['no']}</th>
+                        <th width="120">{t['size']}</th>
+                        <th width="100">{t['color']}</th>
+                        <th width="90">{t['ctns']}</th>
+                        <th width="80">{t['pcs_ctn']}</th>
+                        <th width="100">{t['qty']}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows}
+                    <tr style="text-align:center; height:50px; background:#eee; font-weight:bold;">
+                        <td colspan="4" style="border:1px solid #ddd; padding:8px; text-align:right;">合计 Total:</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{summary_ctns}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">-</td>
+                        <td style="border:1px solid #ddd; padding:8px; color:#d32f2f;">{total_qty_sum}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="summary-box">
+                <div class="summary-item">总箱数 Total Cartons: {summary_ctns}</div>
+                <div class="summary-item">总双数 Total Pairs: {total_qty_sum}</div>
+            </div>
+
+            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">PRINT</button>
+        </body>
+        </html>
+        """
+        out = os.path.join(BASE_DIR, f"StockPrep_{d['id']}.html")
+        with open(out, "w", encoding="utf-8") as f: f.write(html)
+        webbrowser.open(out)
+
     def edit_and_print_bill(self):
         sel = self.tree_hist.selection()
         if sel:
@@ -4336,7 +5118,29 @@ class ShoeBillingApp:
 
     def refresh_cart(self):
         self.tree_cart.delete(*self.tree_cart.get_children())
-        for i, it in enumerate(self.cart_items): self.tree_cart.insert("", "end", values=(i+1, it['no'], it['size'], it['color'], it['ctns'], it['pcs'], it['total'], f"{it['price']:.2f}", f"{it['amount']:.2f}"))
+        for i, it in enumerate(self.cart_items):
+            ctns_display = it['ctns']
+            size_display = it['size']
+            if it.get('type') == 'loose':
+                ctns_display = ""  # 散货不显示箱数
+                pcs_display = ""   # 散货不显示每箱双数
+                # 在 Treeview 中也显示散货的具体尺码汇总
+                details = it.get('loose_data', {})
+                size_display = ", ".join([f"{s}#{qty}" for s, qty in details.items()])
+            else:
+                pcs_display = it['pcs']
+                
+            self.tree_cart.insert("", "end", values=(
+                i+1, 
+                it['no'], 
+                size_display, 
+                it['color'], 
+                ctns_display, 
+                pcs_display, 
+                it['total'], 
+                f"{it['price']:.2f}", 
+                f"{it['amount']:.2f}"
+            ))
 
     def select_img_for_lib(self):
         p = filedialog.askopenfilename()
@@ -4409,6 +5213,10 @@ class ShoeBillingApp:
             idx = int(idx_str) - 1
             it = self.cart_items[idx]
         except (ValueError, IndexError):
+            return
+
+        if it.get('type') == 'loose':
+            self.open_edit_loose_item_dialog(it)
             return
         
         edit_win = tk.Toplevel(self.root)
@@ -4541,11 +5349,26 @@ class ShoeBillingApp:
         self.save_json(FILES["history"], self.history)
         self.refresh_history_list()
         self.gen_invoice_html(order)
+        
+        # 同步生成备货单
+        if self.sync_stock_prep_var.get():
+            s_id = "SP" + order['id'][3:] # 复用单号后缀
+            s_order = {
+                "id": s_id,
+                "date": order['date'],
+                "items": order['items']
+            }
+            self.stock_prep_history.append(s_order)
+            self.save_json(FILES["stock_prep"], self.stock_prep_history)
+            self.refresh_stock_prep_list()
+            self.gen_stock_prep_html(s_order, lang="zh")
+            
         self.reset_billing()
         messagebox.showinfo("成功", "单据已保存并生成发货单。")
 
     def reset_billing(self):
         self.current_edit_bill_id = None
+        self.sync_stock_prep_var.set(False)
         self.cart_items = []; self.refresh_cart()
         for e in list(self.head_ents.values()) + list(self.fin_ents.values()): 
             e.delete(0, tk.END)

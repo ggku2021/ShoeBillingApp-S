@@ -18,15 +18,19 @@ dist/
 inventory_history.json
 billing_history.json
 quote_history.json
+stock_prep_history.json
 license.json
 password.hash
 sys_config.bin
-# User might want to keep products.json as initial data, but usually it is local data.
-# For now I will leave products.json alone unless I see it shouldn't be there.
-# But inventory_history.json is definitely local runtime data.
+keygen_history.csv
+# products.json is sometimes used as demo data, so we might want to keep it or ignore it.
+# Usually, in an ERP, products.json is the main database. Let's ignore it to keep privacy.
+products.json
+演示商品数据/
 
 # Generated files
 Quote_*.html
 Inv_*.html
+StockPrep_*.html
 *备份*.py
 build_exe.py
