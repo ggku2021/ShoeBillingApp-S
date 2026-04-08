@@ -72,7 +72,7 @@ class ShoeBillingApp:
                 self.root.iconbitmap(ICON_PATH)
         except Exception:
             pass
-        self.root.title("鞋类产品报价开单系统 V1.1.1正式版")
+        self.root.title("鞋类产品报价开单系统 V1.1.2正式版")
         self.root.geometry("1550x950")
         
         # --- 打印语言设置 ---
@@ -163,7 +163,7 @@ class ShoeBillingApp:
             return
         
         # 显示授权状态
-        self.root.title(f"鞋类产品报价开单系统 V1.1正式版 - [已授权] 到期时间: {self.license_info.get('expire_date', '未知')} ({self.license_info.get('days_left', 0)}天剩余)")
+        self.root.title(f"鞋类产品报价开单系统 V1.1.2正式版 - [已授权] 到期时间: {self.license_info.get('expire_date', '未知')} ({self.license_info.get('days_left', 0)}天剩余)")
         # ----------------
 
         # 检查是否需要设置初始密码或登录
