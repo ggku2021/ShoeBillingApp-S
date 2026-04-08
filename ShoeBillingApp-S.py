@@ -76,8 +76,8 @@ class ShoeBillingApp:
         self.root.geometry("1550x950")
         
         # --- 打印语言设置 ---
-        self.print_lang_var = tk.StringVar(value="en") # 销售单默认英文
-        self.quote_print_lang_var = tk.StringVar(value="en") # 报价单默认英文
+        self.print_lang_var = tk.StringVar(value="zh") # 销售单默认中文
+        self.quote_print_lang_var = tk.StringVar(value="zh") # 报价单默认中文
         
         self.TRANS = {
             "zh": {
@@ -469,7 +469,7 @@ class ShoeBillingApp:
         
         # 标题
         tk.Label(center_frame, text="鞋类产品报价开单系统", font=("微软雅黑", 21, "bold"), bg="white", fg="#1a1a1a").pack(pady=(30, 6))
-        tk.Label(center_frame, text="V1.1 正式版", font=("微软雅黑", 12, "bold"), bg="white", fg="#1677ff").pack(pady=(0, 24))
+        tk.Label(center_frame, text="V1.1.2 正式版", font=("微软雅黑", 12, "bold"), bg="white", fg="#1677ff").pack(pady=(0, 24))
         
         # 分隔线
         tk.Frame(center_frame, height=2, bg="#1677ff").pack(fill="x", padx=36, pady=(0, 24))
@@ -517,7 +517,7 @@ class ShoeBillingApp:
         
         # 标题
         tk.Label(center_frame, text="鞋类产品报价开单系统", font=("微软雅黑", 21, "bold"), bg="white", fg="#1a1a1a").pack(pady=(26, 6))
-        tk.Label(center_frame, text="V1.1 正式版", font=("微软雅黑", 12, "bold"), bg="white", fg="#1677ff").pack(pady=(0, 10))
+        tk.Label(center_frame, text="V1.1.2 正式版", font=("微软雅黑", 12, "bold"), bg="white", fg="#1677ff").pack(pady=(0, 10))
         tk.Label(center_frame, text="首次运行，请设置系统密码", font=("微软雅黑", 12, "bold"), bg="white", fg="#1677ff").pack(pady=(0, 24))
         
         # 分隔线
@@ -667,7 +667,8 @@ class ShoeBillingApp:
                             "moq_ctns": int(row.get("moq_ctns", 0) or 0),
                             "img": row.get("img", ""),
                             "_checked": False,
-                            "_id": str(uuid.uuid4())
+                            "_id": str(uuid.uuid4()),
+                            "create_time": datetime.datetime.now().timestamp()
                         })
                         imported.append(row.get("no"))
                 self.save_json(FILES["product"], self.products)
@@ -1335,11 +1336,17 @@ class ShoeBillingApp:
             <title>{t['title_quotation']}</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
-                body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }}
-                .header-table {{ width: 100%; margin-bottom: 20px; border:none; }}
-                .title {{ font-size: 36px; font-weight: bold; text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }}
-                .line {{ border-bottom: 3px solid #000; margin-bottom: 20px; }}
-                .meta-info {{ font-size: 16px; margin-bottom: 10px; line-height: 1.6; }}
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; background: #f5f5f5; }}
+                .quotation-container {{ background: white; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; max-width: 100%; }}
+                .title {{ font-size: 38px; font-weight: bold; text-align: center; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }}
+                .title-sender {{ text-align: center; font-size: 11px; color: #666; margin-bottom: 8px; white-space: nowrap; line-height: 1.2; }}
+                .line {{ border-bottom: 3px solid #000; margin-bottom: 12px; }}
+                .meta-row {{ display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; margin-bottom: 4px; padding: 5px 10px; border: 1px solid #eee; background: #fafafa; border-radius: 4px; overflow: hidden; }}
+                .meta-label {{ font-weight: bold; color: #1976d2; margin-right: 12px; border-right: 2px solid #1976d2; padding-right: 10px; flex-shrink: 0; font-size: 15px; min-width: 110px; }}
+                .meta-container {{ display: flex; flex-wrap: nowrap; flex-grow: 1; align-items: center; overflow: hidden; font-size: clamp(10px, 1.35vw, 16px); }}
+                .meta-item {{ margin-right: 15px; white-space: nowrap; flex-shrink: 0; }}
+                .meta-item b {{ color: #777; font-size: 0.9em; margin-right: 4px; border-left: 1px solid #ddd; padding-left: 8px; }}
+                .meta-item:first-child b {{ border-left: none; padding-left: 0; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }}
                 th {{ background: #333; color: #fff; padding: 15px 5px; text-transform: uppercase; border: 1px solid #333; }}
                 .footer-note {{ margin-top: 30px; font-size: 13px; color: #666; font-style: italic; }}
@@ -1355,6 +1362,8 @@ class ShoeBillingApp:
                 }}
                 @media print {{ 
                     .no-print {{ display: none; }} 
+                    body {{ padding: 0; margin: 0; background: white; }}
+                    .quotation-container {{ box-shadow: none; padding: 0; margin: 0; }}
                     .page-numbering {{ 
                         display: block; 
                         counter-increment: page; 
@@ -1366,41 +1375,41 @@ class ShoeBillingApp:
             </style>
         </head>
         <body>
-            <div class="title">{t['title_quotation']}</div>
-            <div class="line"></div>
-            
-            <table class="header-table">
-                <tr>
-                    <td class="meta-info" style="width: 60%; vertical-align: top;">
-                        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:110px; white-space:nowrap;"><b>{t['client']}:</b></span> {d.get('client', '-')}</div>
-                        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:110px; white-space:nowrap;"><b>{t['ref']}:</b></span> {d['id']}</div>
-                    </td>
-                    <td class="meta-info" style="width: 40%; vertical-align: top; text-align: right;">
-                        <div style="margin-bottom: 5px;"><span style="display:inline-block; width:100px; text-align:left; white-space:nowrap;"><b>{t['date']}:</b></span> {d['date']}</div>
-                    </td>
-                </tr>
-            </table>
+            <div class="quotation-container">
+                <div class="title">{t['title_quotation']}</div>
+                <div class="title-sender">
+                    {t['ref']}: {d['id']} | {t['date']}: {d['date']}
+                </div>
+                <div class="line"></div>
+                
+                <div class="meta-row" style="border-left: 5px solid #1976d2;">
+                    <div class="meta-label">{t['client']}</div>
+                    <div class="meta-container">
+                        <div class="meta-item"><b>{t['client']}:</b> {d.get('client', '-')}</div>
+                    </div>
+                </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th width="140">{t['photo']}</th>
-                        <th width="100">{t['no']}</th>
-                        <th width="120">{t['size']}</th>
-                        <th width="100">{t['color']}</th>
-                        <th width="90">{t['moq']}</th>
-                        <th width="80">{t['pcs_ctn']}</th>
-                        <th width="100">{t['qty']}</th>
-                        <th width="110">{t['price']}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="140">{t['photo']}</th>
+                            <th width="100">{t['no']}</th>
+                            <th width="120">{t['size']}</th>
+                            <th width="100">{t['color']}</th>
+                            <th width="90">{t['moq']}</th>
+                            <th width="80">{t['pcs_ctn']}</th>
+                            <th width="100">{t['qty']}</th>
+                            <th width="110">{t['price']}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows}
+                    </tbody>
+                </table>
 
-            <div class="footer-note">
-                {t['valid_note']}
+                <div class="footer-note">
+                    {t['valid_note']}
+                </div>
             </div>
 
             <div class="page-numbering"></div>
@@ -1412,6 +1421,7 @@ class ShoeBillingApp:
             async function copyImages(event) {{
                 const btn = event.currentTarget;
                 const originalText = btn.innerText;
+                const container = document.querySelector('.quotation-container');
                 
                 if (typeof html2canvas === 'undefined') {{
                     alert('复制失败：无法加载图片处理库(html2canvas)。请检查网络连接是否正常，或刷新页面重试。');
@@ -1429,16 +1439,11 @@ class ShoeBillingApp:
                         return new Promise(resolve => {{ img.onload = img.onerror = resolve; }});
                     }}));
 
-                    const canvas = await html2canvas(document.body, {{
+                    const canvas = await html2canvas(container, {{
                         scale: 2,
                         useCORS: true,
                         logging: false,
                         backgroundColor: '#ffffff',
-                        ignoreElements: (el) => el.classList.contains('no-print'),
-                        onclone: (clonedDoc) => {{
-                            const buttons = clonedDoc.querySelectorAll('.no-print');
-                            buttons.forEach(b => b.style.display = 'none');
-                        }}
                     }});
 
                     if (navigator.clipboard && window.ClipboardItem) {{
@@ -1451,11 +1456,10 @@ class ShoeBillingApp:
                 }} catch (err) {{
                     console.error('复制图片失败:', err);
                     try {{
-                        const canvas = await html2canvas(document.body, {{
+                        const canvas = await html2canvas(container, {{
                             scale: 2,
                             useCORS: true,
                             backgroundColor: '#ffffff',
-                            ignoreElements: (el) => el.classList.contains('no-print')
                         }});
                         const a = document.createElement('a');
                         a.href = canvas.toDataURL('image/png');
@@ -1540,7 +1544,7 @@ class ShoeBillingApp:
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>{t['title_invoice']}</title>
+            <title>{t['title_quotation']}</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
                 * {{ box-sizing: border-box; }}
@@ -1561,42 +1565,22 @@ class ShoeBillingApp:
                     font-size: 42px;
                     font-weight: bold;
                     text-align: center;
-                    margin-bottom: 30px;
+                    margin-bottom: 5px;
                     text-transform: uppercase;
                     letter-spacing: 3px;
                     color: #1a1a1a;
                 }}
-                .header-info {{
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 30px;
-                    padding-bottom: 15px;
-                    border-bottom: 2px solid #333;
-                }}
-                .header-left, .header-right {{
-                    font-size: 14px;
-                    line-height: 1.8;
-                }}
-                .header-left div, .header-right div {{
-                    margin-bottom: 5px;
-                }}
-                .header-label {{
-                    font-weight: bold;
-                    color: #555;
-                }}
+                .title-sender {{ text-align: center; font-size: 11px; color: #666; margin-bottom: 8px; white-space: nowrap; line-height: 1.2; }}
+                .line {{ border-bottom: 3px solid #000; margin-bottom: 12px; }}
+                .meta-row {{ display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-start; margin-bottom: 4px; padding: 5px 10px; border: 1px solid #eee; background: #fafafa; border-radius: 4px; overflow: hidden; }}
+                .meta-label {{ font-weight: bold; color: #1976d2; margin-right: 12px; border-right: 2px solid #1976d2; padding-right: 10px; flex-shrink: 0; font-size: 15px; min-width: 110px; }}
+                .meta-container {{ display: flex; flex-wrap: nowrap; flex-grow: 1; align-items: center; overflow: hidden; font-size: clamp(10px, 1.35vw, 16px); }}
+                .meta-item {{ margin-right: 15px; white-space: nowrap; flex-shrink: 0; }}
+                .meta-item b {{ color: #777; font-size: 0.9em; margin-right: 4px; border-left: 1px solid #ddd; padding-left: 8px; }}
+                .meta-item:first-child b {{ border-left: none; padding-left: 0; }}
                 .product-grid {{
                     margin: 30px 0;
                     width: 100%;
-                }}
-                .footer-info {{
-                    margin-top: 40px;
-                    padding-top: 20px;
-                    border-top: 1px solid #ddd;
-                    font-size: 14px;
-                    line-height: 2;
-                }}
-                .footer-info div {{
-                    margin-bottom: 5px;
                 }}
                 .disclaimer {{
                     margin-top: 30px;
@@ -1604,6 +1588,20 @@ class ShoeBillingApp:
                     color: #666;
                     font-style: italic;
                     line-height: 1.6;
+                }}
+                .copy-btn {{
+                    position: fixed;
+                    bottom: 90px;
+                    right: 30px;
+                    padding: 12px 24px;
+                    background: #1677ff;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                    z-index: 1000;
                 }}
                 @media print {{
                     .no-print {{ display: none; }}
@@ -1629,14 +1627,15 @@ class ShoeBillingApp:
         <body>
             <div class="quotation-container">
                 <div class="title">{t['title_quotation']}</div>
+                <div class="title-sender">
+                    {t['ref']}: {d['id']} | {t['date']}: {d['date']}
+                </div>
+                <div class="line"></div>
                 
-                <div class="header-info">
-                    <div class="header-left">
-                        <div><span class="header-label">{t['client']}:</span> {d.get('client', '-')}</div>
-                        <div><span class="header-label">{t['ref']}:</span> {d['id']}</div>
-                    </div>
-                    <div class="header-right">
-                        <div><span class="header-label">{t['date']}:</span> {d['date']}</div>
+                <div class="meta-row" style="border-left: 5px solid #1976d2;">
+                    <div class="meta-label">{t['client']}</div>
+                    <div class="meta-container">
+                        <div class="meta-item"><b>{t['client']}:</b> {d.get('client', '-')}</div>
                     </div>
                 </div>
                 
@@ -1649,10 +1648,74 @@ class ShoeBillingApp:
                 </div>
             </div>
             
+            <button class="no-print copy-btn" onclick="copyImages(event)">复制报价单图片</button>
             <button class="no-print" onclick="window.print()" 
                     style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
                 {t['print_quotation']}
             </button>
+            
+            <script>
+            async function copyImages(event) {{
+                const btn = event.currentTarget;
+                const originalText = btn.innerText;
+                const container = document.querySelector('.quotation-container');
+                
+                if (typeof html2canvas === 'undefined') {{
+                    alert('复制失败：无法加载图片处理库(html2canvas)。请检查网络连接是否正常，或刷新页面重试。');
+                    return;
+                }}
+
+                try {{
+                    btn.innerText = '正在生成图片...';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+
+                    const images = Array.from(document.images);
+                    await Promise.all(images.map(img => {{
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(resolve => {{ img.onload = img.onerror = resolve; }});
+                    }}));
+
+                    const canvas = await html2canvas(container, {{
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                    }});
+
+                    if (navigator.clipboard && window.ClipboardItem) {{
+                        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                        await navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]);
+                        alert('✅ 已成功复制报价单图片到剪贴板！');
+                    }} else {{
+                        throw new Error('Clipboard API 不可用');
+                    }}
+                }} catch (err) {{
+                    console.error('复制图片失败:', err);
+                    try {{
+                        const canvas = await html2canvas(container, {{
+                            scale: 2,
+                            useCORS: true,
+                            backgroundColor: '#ffffff',
+                        }});
+                        const a = document.createElement('a');
+                        a.href = canvas.toDataURL('image/png');
+                        a.download = `报价单_${{new Date().getTime()}}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        alert('⚠️ 剪贴板访问受限，已自动为您下载图片文件。');
+                    }} catch (e) {{
+                        console.error('下载图片失败:', e);
+                        alert('❌ 复制/下载图片均失败，请尝试使用系统自带截图功能(Win+Shift+S)。');
+                    }}
+                }} finally {{
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }}
+            }}
+            </script>
         </body>
         </html>"""
         self.write_and_open(html, f"Quote_{d['id']}_Large.html")
@@ -1889,6 +1952,9 @@ class ShoeBillingApp:
         # 仅在商品列表区域内滚动，更自然
         self.canvas_p.bind("<MouseWheel>", on_mw)
         self.frm_p_list.bind("<MouseWheel>", on_mw)
+        
+        # 绑定 Del 键删除商品
+        self.root.bind("<Delete>", self._on_global_delete_key)
 
         self.selected_prod_id = None
         self.prod_row_widgets = {}  # id -> list of widgets
@@ -2629,7 +2695,7 @@ class ShoeBillingApp:
         for cid, head in zip(self.tree_cart["columns"], heads):
             self.tree_cart.heading(cid, text=head); self.tree_cart.column(cid, width=75, anchor="center")
         self.tree_cart.pack(fill="both", expand=True)
-        self.tree_cart.bind("<Delete>", lambda e: self.delete_cart_item())
+        # self.tree_cart.bind("<Delete>", lambda e: self.delete_cart_item()) # 已改为全局绑定
         self.tree_cart.bind("<Button-3>", self.show_cart_context_menu)
         self.tree_cart.bind("<Double-1>", self.on_cart_item_edit)
         
@@ -3296,7 +3362,8 @@ class ShoeBillingApp:
             <title>{t['title_invoice']}</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
-                body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }}
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; background: #f5f5f5; }}
+                .invoice-container {{ background: white; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; max-width: 100%; }}
                 .header-table {{ width: 100%; margin-bottom: 20px; border:none; }}
                 .title {{ font-size: 38px; font-weight: bold; text-align: center; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }}
                 .title-sender {{ text-align: center; font-size: 9px; color: #666; margin-bottom: 8px; white-space: nowrap; line-height: 1.2; }}
@@ -3328,7 +3395,8 @@ class ShoeBillingApp:
                 }}
                 @media print {{
                     .no-print {{ display: none; }}
-                    body {{ padding: 20px; }}
+                    body {{ padding: 0; margin: 0; background: white; }}
+                    .invoice-container {{ box-shadow: none; padding: 0; margin: 0; }}
                     @page {{ margin: 1cm; }}
                     .page-numbering {{ 
                         display: block; 
@@ -3341,46 +3409,48 @@ class ShoeBillingApp:
             </style>
         </head>
         <body>
-            <div class="title">{t['title_invoice']}</div>
-            <div class="title-sender">
-                {t['invoice_no']}: {d['id']} | {t['date']}: {d['date']} | {t['sender']}: {d.get('sender', '-')} | {t['phone']}: {d.get('sender_phone', '-')} | {t['address']}: {d.get('sender_address', '-')}
-            </div>
-            <div class="line"></div>
-            
-            <div class="meta-row" style="border-left: 5px solid #1976d2;">
-                <div class="meta-label">{t['receiver']}</div>
-                <div class="meta-container">
-                    <div class="meta-item"><b>{t['client']}:</b> {d.get('client', '-')}</div>
-                    <div class="meta-item"><b>{t['mark']}:</b> {d.get('mark', '-')}</div>
-                    <div class="meta-item"><b>{t['phone']}:</b> {d.get('phone', '-')}</div>
-                    <div class="meta-item"><b>{t['address']}:</b> {d.get('address', '-')}</div>
+            <div class="invoice-container">
+                <div class="title">{t['title_invoice']}</div>
+                <div class="title-sender">
+                    {t['invoice_no']}: {d['id']} | {t['date']}: {d['date']} | {t['sender']}: {d.get('sender', '-')} | {t['phone']}: {d.get('sender_phone', '-')} | {t['address']}: {d.get('sender_address', '-')}
                 </div>
+                <div class="line"></div>
+                
+                <div class="meta-row" style="border-left: 5px solid #1976d2;">
+                    <div class="meta-label">{t['receiver']}</div>
+                    <div class="meta-container">
+                        <div class="meta-item"><b>{t['client']}:</b> {d.get('client', '-')}</div>
+                        <div class="meta-item"><b>{t['mark']}:</b> {d.get('mark', '-')}</div>
+                        <div class="meta-item"><b>{t['phone']}:</b> {d.get('phone', '-')}</div>
+                        <div class="meta-item"><b>{t['address']}:</b> {d.get('address', '-')}</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="{photo_col_w}">{t['photo']}</th>
+                            <th width="100">{t['no']}</th>
+                            <th width="80">{t['size']}</th>
+                            <th width="100">{t['color']}</th>
+                            <th width="80">{t['ctns']}</th>
+                            <th width="80">{t['pcs_ctn']}</th>
+                            <th width="100">{t['qty']}</th>
+                            {price_th}
+                            {amount_th}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows}
+                    </tbody>
+                </table>
+
+                <div class="summary-row" style="{f'justify-content: flex-end;' if not show_price else ''}">
+                    {summary_html}
+                </div>
+
+                {f'<div class="note-box"><b>{t["note"]}:</b> {d.get("note", "")}</div>' if d.get("note") else ''}
             </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th width="{photo_col_w}">{t['photo']}</th>
-                        <th width="100">{t['no']}</th>
-                        <th width="80">{t['size']}</th>
-                        <th width="100">{t['color']}</th>
-                        <th width="80">{t['ctns']}</th>
-                        <th width="80">{t['pcs_ctn']}</th>
-                        <th width="100">{t['qty']}</th>
-                        {price_th}
-                        {amount_th}
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>
-
-            <div class="summary-row" style="{f'justify-content: flex-end;' if not show_price else ''}">
-                {summary_html}
-            </div>
-
-            {f'<div class="note-box"><b>{t["note"]}:</b> {d.get("note", "")}</div>' if d.get("note") else ''}
 
             <div class="page-numbering"></div>
 
@@ -3390,6 +3460,7 @@ class ShoeBillingApp:
             async function copyImages(event) {{
                 const btn = event.currentTarget;
                 const originalText = btn.innerText;
+                const container = document.querySelector('.invoice-container');
                 
                 if (typeof html2canvas === 'undefined') {{
                     alert('复制失败：无法加载图片处理库(html2canvas)。请检查网络连接是否正常，或刷新页面重试。');
@@ -3408,17 +3479,11 @@ class ShoeBillingApp:
                         return new Promise(resolve => {{ img.onload = img.onerror = resolve; }});
                     }}));
 
-                    const canvas = await html2canvas(document.body, {{
+                    const canvas = await html2canvas(container, {{
                         scale: 2,
                         useCORS: true,
                         logging: false,
                         backgroundColor: '#ffffff',
-                        ignoreElements: (el) => el.classList.contains('no-print'),
-                        onclone: (clonedDoc) => {{
-                            // 在克隆的文档中隐藏按钮，确保不会出现在截图中
-                            const buttons = clonedDoc.querySelectorAll('.no-print');
-                            buttons.forEach(b => b.style.display = 'none');
-                        }}
                     }});
 
                     if (navigator.clipboard && window.ClipboardItem) {{
@@ -3431,11 +3496,10 @@ class ShoeBillingApp:
                 }} catch (err) {{
                     console.error('复制图片失败:', err);
                     try {{
-                        const canvas = await html2canvas(document.body, {{
+                        const canvas = await html2canvas(container, {{
                             scale: 2,
                             useCORS: true,
                             backgroundColor: '#ffffff',
-                            ignoreElements: (el) => el.classList.contains('no-print')
                         }});
                         const a = document.createElement('a');
                         a.href = canvas.toDataURL('image/png');
@@ -3458,6 +3522,26 @@ class ShoeBillingApp:
         </body>
         </html>"""
         self.write_and_open(html, f"Inv_{d['id']}.html")
+
+    def _on_global_delete_key(self, event):
+        """全局 Del 键处理：根据当前所在标签页执行对应的删除操作"""
+        try:
+            tab_id = self.notebook.select()
+            tab_text = self.notebook.tab(tab_id, "text")
+            
+            if "商品库" in tab_text:
+                self.delete_product()
+            elif "待发货" in tab_text or "销售开单" in tab_text:
+                # 检查焦点是否在购物车 Treeview 上，或者直接尝试删除
+                self.delete_cart_item()
+            elif "开单记录" in tab_text:
+                self.delete_history_item()
+            elif "报价记录" in tab_text:
+                self.delete_quote_item()
+            elif "备货单" in tab_text:
+                self.delete_stock_prep_item()
+        except Exception:
+            pass
 
     def delete_product(self):
         # 如果有选中的选中项（复选框），则批量删除；否则删除当前选中的高亮项
@@ -3490,8 +3574,10 @@ class ShoeBillingApp:
         if sel:
             idx = int(self.tree_cart.item(sel[0], "values")[0]) - 1
             if 0 <= idx < len(self.cart_items):
-                del self.cart_items[idx]
-                self.refresh_cart()
+                it = self.cart_items[idx]
+                if messagebox.askyesno("确认删除", f"确定要从待发货清单中删除货号 {it['no']} 吗？"):
+                    del self.cart_items[idx]
+                    self.refresh_cart()
     
     def show_cart_context_menu(self, e):
         item = self.tree_cart.identify_row(e.y)
@@ -3569,6 +3655,9 @@ class ShoeBillingApp:
             tag_str = p.get('tag') or ''
             if self.current_filter_tag != "全部" and self.current_filter_tag not in [x.strip() for x in tag_str.split(',')]: continue
             filtered.append(p)
+            
+        # 按创建时间降序排序（新增的在前）
+        filtered.sort(key=lambda x: x.get('create_time', 0), reverse=True)
 
         # 分页逻辑
         total_items = len(filtered)
@@ -4165,7 +4254,9 @@ class ShoeBillingApp:
         
         def confirm_save():
             # Save all
+            now = datetime.datetime.now().timestamp()
             for p in products_to_add:
+                p['create_time'] = now
                 self.products.append(p)
             
             self.save_json(FILES["product"], self.products)
@@ -4257,6 +4348,7 @@ class ShoeBillingApp:
                 d["img"] = new_img_data["b64"]
                 d["_checked"] = False
                 d["_id"] = str(uuid.uuid4())
+                d["create_time"] = datetime.datetime.now().timestamp()
 
                 if d.get("tag") is None:
                     d["tag"] = ""
@@ -4270,7 +4362,6 @@ class ShoeBillingApp:
             # Single product save
             for d in products_to_add:
                 self.products.append(d)
-                saved_count += 1
 
             self.save_json(FILES["product"], self.products)
             self.refresh_product_list()
@@ -4608,7 +4699,7 @@ class ShoeBillingApp:
             self.tree_hist.heading(c, text=h); self.tree_hist.column(c, anchor="center", width=200)
         self.tree_hist.pack(fill="both", expand=True, padx=8, pady=8)
         self.tree_hist.bind("<Double-1>", lambda e: self.reprint_bill())
-        self.tree_hist.bind("<Delete>", lambda e: self.delete_history_item())
+        # self.tree_hist.bind("<Delete>", lambda e: self.delete_history_item()) # 已改为全局绑定
         self.tree_hist.bind("<Button-3>", self.show_history_context_menu)
         self.history_context_menu = tk.Menu(self.root, tearoff=0, font=self.fonts['body'])
         self.history_context_menu.add_command(label="🗑️ 删除销售单", command=self.delete_history_item)
@@ -4631,7 +4722,7 @@ class ShoeBillingApp:
             self.tree_q_hist.heading(c, text=h); self.tree_q_hist.column(c, anchor="center", width=250)
         self.tree_q_hist.pack(fill="both", expand=True, padx=8, pady=8)
         self.tree_q_hist.bind("<Double-1>", lambda e: self.reprint_quote())
-        self.tree_q_hist.bind("<Delete>", lambda e: self.delete_quote_item())
+        # self.tree_q_hist.bind("<Delete>", lambda e: self.delete_quote_item()) # 已改为全局绑定
         self.tree_q_hist.bind("<Button-3>", self.show_quote_context_menu)
         self.quote_context_menu = tk.Menu(self.root, tearoff=0, font=self.fonts['body'])
         self.quote_context_menu.add_command(label="🗑️ 删除报价单", command=self.delete_quote_item)
@@ -4904,8 +4995,11 @@ class ShoeBillingApp:
         html = f"""
         <html>
         <head>
+            <meta charset="UTF-8">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <style>
                 body {{ font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }}
+                .stock-prep-container {{ background: white; padding: 20px; }}
                 .title {{ font-size: 36px; font-weight: bold; text-align: center; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }}
                 .line {{ border-bottom: 3px solid #000; margin-bottom: 20px; }}
                 .meta-info {{ font-size: 16px; margin-bottom: 10px; line-height: 1.6; }}
@@ -4917,42 +5011,108 @@ class ShoeBillingApp:
             </style>
         </head>
         <body>
-            <div class="title">{t['title_stock_prep']}</div>
-            <div class="line"></div>
-            
-            <div class="meta-info">
-                <b>{t['invoice_no']}:</b> {d['id']} &nbsp;&nbsp;&nbsp;&nbsp; <b>{t['date']}:</b> {d['date']}
+            <div class="stock-prep-container">
+                <div class="title">{t['title_stock_prep']}</div>
+                <div class="line"></div>
+                
+                <div class="meta-info">
+                    <b>{t['invoice_no']}:</b> {d['id']} &nbsp;&nbsp;&nbsp;&nbsp; <b>{t['date']}:</b> {d['date']}
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="140">{t['photo']}</th>
+                            <th width="100">{t['no']}</th>
+                            <th width="120">{t['size']}</th>
+                            <th width="100">{t['color']}</th>
+                            <th width="90">{t['ctns']}</th>
+                            <th width="80">{t['pcs_ctn']}</th>
+                            <th width="100">{t['qty']}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows}
+                        <tr style="text-align:center; height:50px; background:#eee; font-weight:bold;">
+                            <td colspan="4" style="border:1px solid #ddd; padding:8px; text-align:right;">合计 Total:</td>
+                            <td style="border:1px solid #ddd; padding:8px;">{summary_ctns}</td>
+                            <td style="border:1px solid #ddd; padding:8px;">-</td>
+                            <td style="border:1px solid #ddd; padding:8px; color:#d32f2f;">{total_qty_sum}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="summary-box">
+                    <div class="summary-item">总箱数 Total Cartons: {summary_ctns}</div>
+                    <div class="summary-item">总双数 Total Pairs: {total_qty_sum}</div>
+                </div>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th width="140">{t['photo']}</th>
-                        <th width="100">{t['no']}</th>
-                        <th width="120">{t['size']}</th>
-                        <th width="100">{t['color']}</th>
-                        <th width="90">{t['ctns']}</th>
-                        <th width="80">{t['pcs_ctn']}</th>
-                        <th width="100">{t['qty']}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                    <tr style="text-align:center; height:50px; background:#eee; font-weight:bold;">
-                        <td colspan="4" style="border:1px solid #ddd; padding:8px; text-align:right;">合计 Total:</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{summary_ctns}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">-</td>
-                        <td style="border:1px solid #ddd; padding:8px; color:#d32f2f;">{total_qty_sum}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="summary-box">
-                <div class="summary-item">总箱数 Total Cartons: {summary_ctns}</div>
-                <div class="summary-item">总双数 Total Pairs: {total_qty_sum}</div>
-            </div>
-
+            <button class="no-print" onclick="copyImages(event)" style="position:fixed; bottom:90px; right:30px; padding:12px 24px; background:#1677ff; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">复制备货单图片</button>
             <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">PRINT</button>
+            
+            <script>
+            async function copyImages(event) {{
+                const btn = event.currentTarget;
+                const originalText = btn.innerText;
+                const container = document.querySelector('.stock-prep-container');
+                
+                if (typeof html2canvas === 'undefined') {{
+                    alert('复制失败：无法加载图片处理库(html2canvas)。请检查网络连接是否正常，或刷新页面重试。');
+                    return;
+                }}
+
+                try {{
+                    btn.innerText = '正在生成图片...';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+
+                    const images = Array.from(document.images);
+                    await Promise.all(images.map(img => {{
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(resolve => {{ img.onload = img.onerror = resolve; }});
+                    }}));
+
+                    const canvas = await html2canvas(container, {{
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                    }});
+
+                    if (navigator.clipboard && window.ClipboardItem) {{
+                        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                        await navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]);
+                        alert('✅ 已成功复制备货单图片到剪贴板！');
+                    }} else {{
+                        throw new Error('Clipboard API 不可用');
+                    }}
+                }} catch (err) {{
+                    console.error('复制图片失败:', err);
+                    try {{
+                        const canvas = await html2canvas(container, {{
+                            scale: 2,
+                            useCORS: true,
+                            backgroundColor: '#ffffff',
+                        }});
+                        const a = document.createElement('a');
+                        a.href = canvas.toDataURL('image/png');
+                        a.download = `备货单_${{new Date().getTime()}}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        alert('⚠️ 剪贴板访问受限，已自动为您下载图片文件。');
+                    }} catch (e) {{
+                        console.error('下载图片失败:', e);
+                        alert('❌ 复制/下载图片均失败，请尝试使用系统自带截图功能(Win+Shift+S)。');
+                    }}
+                }} finally {{
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }}
+            }}
+            </script>
         </body>
         </html>
         """
@@ -5174,6 +5334,7 @@ class ShoeBillingApp:
         d['_checked'] = False
         d['tag'] = ""
         d['_id'] = str(uuid.uuid4())
+        d['create_time'] = datetime.datetime.now().timestamp()
         self.products.append(d)
         
         self.save_json(FILES["product"], self.products)
@@ -5188,6 +5349,12 @@ class ShoeBillingApp:
         d = self.get_prod_data_from_panel()
         idx = next((i for i, x in enumerate(self.products) if x.get('_id') == self.selected_prod_id), -1)
         if idx >= 0:
+            # 如果原数据没有创建时间，且当前正在更新，可以保持原样或补全
+            if 'create_time' not in self.products[idx]:
+                d['create_time'] = 0 # 保持为旧数据
+            else:
+                d['create_time'] = self.products[idx]['create_time']
+                
             self.products[idx].update(d)
             self.save_json(FILES["product"], self.products)
             self.refresh_product_list()
