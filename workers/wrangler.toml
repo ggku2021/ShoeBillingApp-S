@@ -1,0 +1,17 @@
+name = "shoe-quote-api"
+main = "src/index.js"
+compatibility_date = "2024-08-01"
+
+# KV 命名空间（先占位）
+[[kv_namespaces]]
+binding = "DB"
+id = "REPLACE_WITH_YOUR_KV_ID"
+
+# R2 存储桶（先占位）
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "shoe-quote-assets"
+
+# 变量
+[vars]
+log_level = "info"

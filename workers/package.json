@@ -1,0 +1,12 @@
+{
+  "name": "shoe-quote-api",
+  "private": true,
+  "scripts": {
+    "start": "wrangler dev",
+    "publish": "wrangler publish"
+  },
+  "dependencies": {
+    "itty-router": "^4.0.1",
+    "pdf-lib": "^1.17.1"
+  }
+}
