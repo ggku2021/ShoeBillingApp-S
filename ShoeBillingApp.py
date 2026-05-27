@@ -2828,6 +2828,9 @@ class ShoeBillingApp:
         self.cart_context_menu = tk.Menu(self.root, tearoff=0, font=self.fonts['body'])
         self.cart_context_menu.add_command(label="📋 复制一条记录", command=self.copy_cart_item)
         self.cart_context_menu.add_separator()
+        self.cart_context_menu.add_command(label="📤 上移", command=self.move_cart_item_up)
+        self.cart_context_menu.add_command(label="📥 下移", command=self.move_cart_item_down)
+        self.cart_context_menu.add_separator()
         self.cart_context_menu.add_command(label="🗑️ 从当前清单删除", command=self.delete_cart_item)
 
         self.invoice_img_mode = tk.StringVar(value="small")
@@ -3750,6 +3753,31 @@ class ShoeBillingApp:
                 # 插入到原记录后面
                 self.cart_items.insert(idx + 1, new_item)
                 self.refresh_cart()
+
+    def move_cart_item_up(self):
+        """将选中的清单记录上移一位"""
+        sel = self.tree_cart.selection()
+        if sel:
+            idx = int(self.tree_cart.item(sel[0], "values")[0]) - 1
+            if idx > 0:
+                self.cart_items[idx], self.cart_items[idx-1] = self.cart_items[idx-1], self.cart_items[idx]
+                self.refresh_cart()
+                # 保持选中状态
+                new_iid = self.tree_cart.get_children()[idx-1]
+                self.tree_cart.selection_set(new_iid)
+                self.tree_cart.see(new_iid)
+
+    def move_cart_item_down(self):
+        """将选中的清单记录下移一位"""
+        sel = self.tree_cart.selection()
+        if sel:
+            idx = int(self.tree_cart.item(sel[0], "values")[0]) - 1
+            if idx < len(self.cart_items) - 1:
+                self.cart_items[idx], self.cart_items[idx+1] = self.cart_items[idx+1], self.cart_items[idx]
+                self.refresh_cart()
+                new_iid = self.tree_cart.get_children()[idx+1]
+                self.tree_cart.selection_set(new_iid)
+                self.tree_cart.see(new_iid)
 
     def show_cart_context_menu(self, e):
         item = self.tree_cart.identify_row(e.y)
