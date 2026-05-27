@@ -1,17 +1,13 @@
 # USER.md - About Your Human
 
-_Learn about the person you're helping. Update this as you go._
-
-- **Name:**
-- **What to call them:**
-- **Pronouns:** _(optional)_
-- **Timezone:**
-- **Notes:**
+- **Name:** 
+- **What to call them:** 老板
+- **Pronouns:**
+- **Timezone:** Asia/Shanghai (UTC+8)
+- **Notes:** 做鞋类外贸生意，用自研的 ShoeBillingApp 管理报价开单
 
 ## Context
 
-_(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)_
-
----
-
-The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
+- 核心工具：鞋类产品报价开单系统 (ShoeBillingApp)，Tkinter + Python
+- 需求偏向实用：代发货清单管理、打印单据、布局调整等
+- 沟通风格：直接，不绕弯子
