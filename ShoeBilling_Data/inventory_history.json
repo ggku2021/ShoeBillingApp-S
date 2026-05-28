@@ -1,0 +1,41 @@
+[
+  {
+    "id": "dadd6b50-ac4a-4fe1-9d3a-782eda782843",
+    "time": "2026-04-08 10:23:05",
+    "type": "进货",
+    "direction": "入库",
+    "mode": "散数 (10双)",
+    "change_qty": 10,
+    "stock_after": 70,
+    "product_no": "2503-5",
+    "product_color": "MIX",
+    "product_size": "40-45",
+    "note": ""
+  },
+  {
+    "id": "e532dcd4-149a-4e30-8c4a-9a23e1c46a41",
+    "time": "2026-04-08 10:22:53",
+    "type": "进货",
+    "direction": "入库",
+    "mode": "整箱 (1箱 x 60双)",
+    "change_qty": 60,
+    "stock_after": 60,
+    "product_no": "2503-5",
+    "product_color": "MIX",
+    "product_size": "40-45",
+    "note": ""
+  },
+  {
+    "id": "5232aea0-c1da-4152-aa93-500fb1eb7b3a",
+    "time": "2026-02-06 23:03:41",
+    "type": "进货",
+    "direction": "入库",
+    "mode": "整箱 (10箱 x 15双)",
+    "change_qty": 150,
+    "stock_after": 150,
+    "product_no": "1927",
+    "product_color": "米色",
+    "product_size": "39-44",
+    "note": ""
+  }
+]
