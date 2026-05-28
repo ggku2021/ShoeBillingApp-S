@@ -1525,9 +1525,9 @@ class ShoeBillingApp:
             <div class="page-numbering"></div>
 
             <button class="no-print" onclick="copyImages(event)" style="position:fixed; bottom:90px; right:30px; padding:12px 24px; background:#1677ff; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">复制报价单图片</button>
-            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{t['print_quotation']}</button>
+            <button class="no-print" onclick="var s=document.getElementById('sliderControl');if(s)s.style.display='none';window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{t['print_quotation']}</button>
             
-            <div class="no-print" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
+            <div class="no-print slider-no-print" id="sliderControl" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:12px; color:#666;">字体大小:</span>
                 <span id="fontSizeLabel" style="font-size:13px; color:#1677ff; font-weight:bold; min-width:22px; text-align:center;">{self.quote_font_size}</span>
                 <input type="range" id="fontSizeSlider" min="15" max="35" value="{self.quote_font_size}" step="1" 
@@ -1764,12 +1764,12 @@ class ShoeBillingApp:
             </div>
             
             <button class="no-print copy-btn" onclick="copyImages(event)">复制报价单图片</button>
-            <button class="no-print" onclick="window.print()" 
+            <button class="no-print" onclick="var s=document.getElementById('sliderControl');if(s)s.style.display='none';window.print()" 
                     style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
                 {t['print_quotation']}
             </button>
             
-            <div class="no-print" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
+            <div class="no-print slider-no-print" id="sliderControl" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:12px; color:#666;">字体大小:</span>
                 <span id="fontSizeLabel" style="font-size:13px; color:#1677ff; font-weight:bold; min-width:22px; text-align:center;">{self.quote_font_size}</span>
                 <input type="range" id="fontSizeSlider" min="15" max="35" value="{self.quote_font_size}" step="1" 
@@ -3610,9 +3610,9 @@ class ShoeBillingApp:
             <div class="page-numbering"></div>
 
             <button class="no-print" onclick="copyImages(event)" style="position:fixed; bottom:90px; right:30px; padding:12px 24px; background:#1677ff; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">复制发货单图片</button>
-            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{t['print_invoice']}</button>
+            <button class="no-print" onclick="var s=document.getElementById('sliderControl');if(s)s.style.display='none';window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{t['print_invoice']}</button>
             
-            <div class="no-print" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
+            <div class="no-print slider-no-print" id="sliderControl" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:12px; color:#666;">字体大小:</span>
                 <span id="fontSizeLabel" style="font-size:13px; color:#1677ff; font-weight:bold; min-width:22px; text-align:center;">{self.print_font_size}</span>
                 <input type="range" id="fontSizeSlider" min="15" max="35" value="{self.print_font_size}" step="1" 
@@ -5250,9 +5250,9 @@ class ShoeBillingApp:
             </div>
 
             <button class="no-print" onclick="copyImages(event)" style="position:fixed; bottom:90px; right:30px; padding:12px 24px; background:#1677ff; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">复制备货单图片</button>
-            <button class="no-print" onclick="window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">PRINT</button>
+            <button class="no-print" onclick="var s=document.getElementById('sliderControl');if(s)s.style.display='none';window.print()" style="position:fixed; bottom:30px; right:30px; padding:15px 40px; background:#333; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">PRINT</button>
             
-            <div class="no-print" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
+            <div class="no-print slider-no-print" id="sliderControl" style="position:fixed; bottom:150px; right:30px; background:white; padding:6px 12px; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index:999; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:12px; color:#666;">字体大小:</span>
                 <span id="fontSizeLabel" style="font-size:13px; color:#1677ff; font-weight:bold; min-width:22px; text-align:center;">{self.print_font_size}</span>
                 <input type="range" id="fontSizeSlider" min="15" max="35" value="{self.print_font_size}" step="1" 
