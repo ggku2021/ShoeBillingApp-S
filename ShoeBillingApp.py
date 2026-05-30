@@ -1881,9 +1881,6 @@ class ShoeBillingApp:
         tk.Button(sys_frame, text="🔒 修改密码", command=self.change_password, bg="#9b59b6", fg="white", 
                  font=self.fonts['body'], relief="flat", cursor="hand2", padx=14, pady=6,
                  activebackground="#8e44ad").pack(side="left", padx=4)
-        tk.Button(sys_frame, text="🖨 打印设置", command=self.open_print_settings, bg="#fa8c16", fg="white", 
-                 font=self.fonts['body'], relief="flat", cursor="hand2", padx=14, pady=6,
-                 activebackground="#d46b08").pack(side="left", padx=4)
         
         # 配置Notebook样式（更大标签）
         style = ttk.Style()
